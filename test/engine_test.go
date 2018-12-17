@@ -56,7 +56,12 @@ func TestEngine_Insert(t *testing.T) {
 	err = engine.Update(faq, "title")
 	t.Logf("Update faq:%v, err:%v", faq, err)
 
-	has, err := engine.Get(faq)
+	has, err := engine.GetByCondition(faq, &redis_orm.SearchCondition{
+		SearchColumn:  "Title",
+		IndexType:     redis_orm.IndexType_IdScore,
+		FieldMinValue: "titlexx",
+		FieldMaxValue: "",
+	})
 	t.Logf("Get faq:%v,has:%v,err:%v", faq, has, err)
 }
 
@@ -64,7 +69,7 @@ func TestEngine_Insert(t *testing.T) {
 //	faq := &Faq{
 //		Id: 6,
 //	}
-//	has, err := engine.Get(faq)
+//	has, err := engine.Get(faq)`
 //	t.Logf("faq:%v,has:%v,err:%v", faq, has, err)
 //}
 
@@ -78,10 +83,12 @@ func TestEngine_Insert(t *testing.T) {
 //}
 
 type Faq struct {
-	Id        int64  `rds:"pk autoincr comment 'ID'"`
-	Title     string `rds:"dft 'faqtitle' index comment '标题'"`
-	Content   string `rds:"dft 'cnt' comment '内容'"`
-	Hearts    int    `rds:"dft 10 comment '点赞数'"`
-	CreatedAt int64  `rds:"created_at comment '创建时间'"`
-	UpdatedAt int64  `rds:"updated_at comment '修改时间'"`
+	Id        int64  `redis_orm:"pk autoincr comment 'ID'"`
+	Type      int    `redis_orm:"dft 1 comment '类型'"`
+	Title     string `redis_orm:"dft 'faqtitle' index comment '标题'"`
+	Content   string `redis_orm:"dft 'cnt' comment '内容'"`
+	Hearts    int    `redis_orm:"dft 10 comment '点赞数'"`
+	CreatedAt int64  `redis_orm:"created_at comment '创建时间'"`
+	UpdatedAt int64  `redis_orm:"updated_at comment '修改时间'"`
+	TypeTitle string `redis_orm:"combinedindex Typea&Title comment '组合索引(类型&标题)'"`
 }

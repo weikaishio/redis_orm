@@ -2,18 +2,20 @@ package redis_orm
 
 import (
 	"fmt"
-	"reflect" 
+	"reflect"
 
 	"github.com/go-redis/redis"
 	"github.com/mkideal/log"
+	"strings"
 )
 
+//todo:combined index
 func (e *Engine) indexGetId(searchCon *SearchCondition, bean interface{}) (int64, error) {
 	table, err := e.GetTable(bean)
 	if err != nil {
 		return 0, err
 	}
-	index, ok := table.IndexesMap[searchCon.SearchColumn]
+	index, ok := table.IndexesMap[strings.ToLower(searchCon.SearchColumn)]
 	if !ok {
 		return 0, err
 	}
@@ -71,13 +73,13 @@ func (e *Engine) indexDelete(bean interface{}) error {
 	}
 	//fmt.Printf("pkFieldValue:%v,int:%d\n", pkFieldValue, pkFieldValue.Int())
 	indexsMap := table.IndexesMap
-	for k, index := range indexsMap {
-		fieldValue := reflectVal.FieldByName(k)
+	for _, index := range indexsMap {
+		fieldValue := reflectVal.FieldByName(index.ColumnName[0])
 		if err != nil {
-			log.Error("indexDelete GetFieldValue(%s) err:%v", k, err)
+			log.Error("indexDelete GetFieldValue(%s) err:%v", index.ColumnName, err)
 			return err
 		}
-		fmt.Printf("indexDelete k:%v, index:%v, fieldValue:%v\n", k, index, fieldValue)
+		fmt.Printf("indexDelete k:%v, index:%v, fieldValue:%v\n", index.ColumnName, index, fieldValue)
 		switch index.Type {
 		case IndexType_IdMember:
 			log.Trace("indexDelete %s:%v", index.NameKey, pkFieldValue.Int())
@@ -122,13 +124,13 @@ func (e *Engine) indexUpdate(bean interface{}) error {
 	}
 	fmt.Printf("pkFieldValue:%v,int:%d\n", pkFieldValue, pkFieldValue.Int())
 	indexsMap := table.IndexesMap
-	for k, index := range indexsMap {
-		fieldValue := reflectVal.FieldByName(k)
+	for _, index := range indexsMap {
+		fieldValue := reflectVal.FieldByName(index.ColumnName[0])
 		if err != nil {
-			log.Error("IndexUpdate GetFieldValue(%s) err:%v", k, err)
+			log.Error("IndexUpdate GetFieldValue(%s) err:%v", index.ColumnName, err)
 			return err
 		}
-		fmt.Printf("IndexUpdate k:%v, index:%v, fieldValue:%v\n", k, index, fieldValue)
+		fmt.Printf("IndexUpdate k:%v, index:%v, fieldValue:%v\n", index.ColumnName, index, fieldValue)
 		switch index.Type {
 		case IndexType_IdMember:
 			var score float64

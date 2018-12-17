@@ -10,7 +10,7 @@ const (
 
 type Index struct {
 	NameKey  string
-	ColumnName string
+	ColumnName []string
 	Type  IndexType
 }
 

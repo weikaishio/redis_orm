@@ -115,6 +115,10 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 					col.IsCreated = true
 				} else if keyLower == TagUpdatedAt {
 					col.IsUpdated = true
+				} else if keyLower == TagCombinedindex {
+					//todo:combined index
+					table.AddIndex(fieldType, col.Name)
+					continue
 				} else {
 					//abondon
 				}

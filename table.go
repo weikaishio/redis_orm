@@ -37,7 +37,7 @@ func (table *Table) GetAutoIncrKey() string {
 func (table *Table) GetTableKey() string {
 	return fmt.Sprintf("%s%s", KeyTbPrefix, strings.ToLower(table.Name))
 }
-func (table *Table) AddIndex(typ reflect.Type, fieldName string) {
+func (table *Table) AddIndex(typ reflect.Type, columnName string) {
 	var indexType IndexType
 	switch typ.Kind() {
 	case reflect.String:
@@ -59,12 +59,12 @@ func (table *Table) AddIndex(typ reflect.Type, fieldName string) {
 	}
 
 	index := &Index{
-		NameKey:    fmt.Sprintf("%s%s_%s", KeyIndexPrefix, strings.ToLower(table.Name), strings.ToLower(fieldName)),
-		ColumnName: fieldName,
+		NameKey:    fmt.Sprintf("%s%s_%s", KeyIndexPrefix, strings.ToLower(table.Name), strings.ToLower(columnName)),
+		ColumnName: []string{columnName},
 		Type:       indexType,
 	}
 	table.mutex.Lock()
-	table.IndexesMap[fieldName] = index
+	table.IndexesMap[strings.ToLower(columnName)] = index
 	table.mutex.Unlock()
 }
 func (table *Table) AddColumn(col *Column) {

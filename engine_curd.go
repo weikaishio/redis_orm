@@ -8,14 +8,27 @@ import (
 )
 
 //todo: SearchCondition not a elegant way..
-//func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (bool, error) {
-//	id, err := e.indexGetId(searchCon, bean)
-//	if err != nil {
-//		return false, err
-//	}
-//
-//	return false, nil
-//}
+func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (bool, error) {
+	table, err := e.GetTable(bean)
+	if err != nil {
+		return false, err
+	}
+
+	getId, err := e.indexGetId(searchCon, bean)
+	if err != nil {
+		return false, err
+	}
+	if getId == 0 {
+		return false, Err_DataNotAvailable
+	}
+
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	colValue := reflectVal.FieldByName(table.PrimaryKey)
+	colValue.SetInt(getId)
+
+	return e.Get(bean)
+}
 func (e *Engine) Get(bean interface{}) (bool, error) {
 	table, err := e.GetTable(bean)
 	if err != nil {
