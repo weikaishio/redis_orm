@@ -1,13 +1,13 @@
 package test
 
 import (
-	"testing"
-	"time"
-
 	"github.com/weikaishio/redis_orm"
+	"testing"
 
+	"encoding/json"
 	"github.com/go-redis/redis"
 	"github.com/mkideal/log"
+	"github.com/weikaishio/redis_orm/test/models"
 )
 
 var (
@@ -17,14 +17,9 @@ var (
 //test and log?
 func init() {
 	options := redis.Options{
-		Addr:               "127.0.0.1:6379",
-		Password:           "",
-		DB:                 1,
-		DialTimeout:        10 * time.Second,
-		ReadTimeout:        10 * time.Second,
-		WriteTimeout:       10 * time.Second,
-		IdleTimeout:        60 * time.Second,
-		IdleCheckFrequency: 15 * time.Second,
+		Addr:     "127.0.0.1:6379",
+		Password: "",
+		DB:       1,
 	}
 
 	redisClient := redis.NewClient(&options)
@@ -35,7 +30,7 @@ func init() {
 }
 
 //func TestEngine_GetTable(t *testing.T) {
-//	faq := &Faq{
+//	faq := &models.Faq{
 //		Title:   "为啥",
 //		Content: "我也不知道",
 //		Hearts:  20,
@@ -46,49 +41,59 @@ func init() {
 //}
 
 func TestEngine_Insert(t *testing.T) {
-	faq := &Faq{
-		Hearts: 20,
+	faq := &models.Faq{
+		Title:"index",
 	}
 	err := engine.Insert(faq)
-	t.Logf("Insert faq:%v,err:%v", faq, err)
+	bys, _ := json.Marshal(faq)
+	t.Logf("Insert faq:%v,err:%v", string(bys), err)
 
-	faq.Title = "titlexx"
-	err = engine.Update(faq, "title")
-	t.Logf("Update faq:%v, err:%v", faq, err)
+	//faq.Title = "titlexx"
+	//err := engine.Update(faq, "title")
+	//t.Logf("Update faq:%v, err:%v", faq, err)
 
-	has, err := engine.GetByCondition(faq, &redis_orm.SearchCondition{
-		SearchColumn:  "Title",
-		IndexType:     redis_orm.IndexType_IdScore,
-		FieldMinValue: "titlexx",
-		FieldMaxValue: "",
-	})
-	t.Logf("Get faq:%v,has:%v,err:%v", faq, has, err)
+	//err:=engine.Delete(faq)
+	//t.Logf("Delete faq:%v, err:%v", faq, err)
+	//has, err := engine.GetByCondition(faq, &redis_orm.SearchCondition{
+	//	SearchColumn:  []string{"Type", "Hearts"},
+	//	IndexType:     redis_orm.IndexType_IdMember,
+	//	FieldMinValue: 1<<32 | 20,
+	//	FieldMaxValue: 1<<32 | 20,
+	//})
+	//t.Logf("Get faq:%v,has:%v,err:%v", faq, has, err)
 }
 
 //func TestEngine_Get(t *testing.T) {
-//	faq := &Faq{
-//		Id: 6,
+//	faq := &models.Faq{
+//		Id: 2,
 //	}
-//	has, err := engine.Get(faq)`
-//	t.Logf("faq:%v,has:%v,err:%v", faq, has, err)
+//	has, err := engine.Get(faq)
+//	bys, _ := json.Marshal(faq)
+//	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
 //}
 
+func TestEngine_GetByCombinedIndex(t *testing.T) {
+	faq := &models.Faq{
+		Type:  1,
+		Title: "index",
+	}
+	has, err := engine.GetByCondition(faq, redis_orm.NewSearchCondition(
+		redis_orm.IndexType_IdScore,
+		"1&index",
+		"1&index",
+		"Type",
+		"Title",
+	))
+
+	bys, _ := json.Marshal(faq)
+	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
+}
+
 //func TestEngine_Update(t *testing.T) {
-//	faq := &Faq{
+//	faq := &models.Faq{
 //		Id:    5,
 //		Title: "test5",
 //	}
 //	err := engine.Update(faq, "title")
 //	t.Logf("TestEngine_Update err:%v", err)
 //}
-
-type Faq struct {
-	Id        int64  `redis_orm:"pk autoincr comment 'ID'"`
-	Type      int    `redis_orm:"dft 1 comment '类型'"`
-	Title     string `redis_orm:"dft 'faqtitle' index comment '标题'"`
-	Content   string `redis_orm:"dft 'cnt' comment '内容'"`
-	Hearts    int    `redis_orm:"dft 10 comment '点赞数'"`
-	CreatedAt int64  `redis_orm:"created_at comment '创建时间'"`
-	UpdatedAt int64  `redis_orm:"updated_at comment '修改时间'"`
-	TypeTitle string `redis_orm:"combinedindex Typea&Title comment '组合索引(类型&标题)'"`
-}

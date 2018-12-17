@@ -15,8 +15,9 @@ func (e *Engine) indexGetId(searchCon *SearchCondition, bean interface{}) (int64
 	if err != nil {
 		return 0, err
 	}
-	index, ok := table.IndexesMap[strings.ToLower(searchCon.SearchColumn)]
+	index, ok := table.IndexesMap[strings.ToLower(searchCon.Name())]
 	if !ok {
+		fmt.Printf("searchCon:%s not exist\n", strings.ToLower(searchCon.Name()))
 		return 0, err
 	}
 	//beanValue := reflect.ValueOf(bean)
@@ -42,7 +43,7 @@ func (e *Engine) indexGetId(searchCon *SearchCondition, bean interface{}) (int64
 			log.Error("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
 		}
 	case IndexType_IdScore:
-		res, err := e.redisClient.ZScore(index.NameKey, searchCon.FieldMinValue.(string)).Result()
+		res, err := e.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
 		if err == nil {
 			return int64(res), nil
 		} else {
@@ -74,12 +75,12 @@ func (e *Engine) indexDelete(bean interface{}) error {
 	//fmt.Printf("pkFieldValue:%v,int:%d\n", pkFieldValue, pkFieldValue.Int())
 	indexsMap := table.IndexesMap
 	for _, index := range indexsMap {
-		fieldValue := reflectVal.FieldByName(index.ColumnName[0])
+		fieldValue := reflectVal.FieldByName(index.IndexColumn[0])
 		if err != nil {
-			log.Error("indexDelete GetFieldValue(%s) err:%v", index.ColumnName, err)
+			log.Error("indexDelete GetFieldValue(%s) err:%v", index.IndexColumn, err)
 			return err
 		}
-		fmt.Printf("indexDelete k:%v, index:%v, fieldValue:%v\n", index.ColumnName, index, fieldValue)
+		//fmt.Printf("indexDelete k:%v, index:%v, fieldValue:%v\n", index.IndexColumn, index, fieldValue)
 		switch index.Type {
 		case IndexType_IdMember:
 			log.Trace("indexDelete %s:%v", index.NameKey, pkFieldValue.Int())
@@ -98,6 +99,104 @@ func (e *Engine) indexDelete(bean interface{}) error {
 		}
 	}
 	return nil
+}
+
+//当前数据是否已经存在，存在则返回主键ID
+func (e *Engine) indexIsExistData(bean interface{}) (int64, error) {
+	table, err := e.GetTable(bean)
+	if err != nil {
+		return 0, err
+	}
+
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	typ := reflectVal.Type()
+	_, has := typ.FieldByName(table.PrimaryKey)
+	if !has {
+		return 0, Err_PrimaryKeyNotFound
+	}
+
+	indexsMap := table.IndexesMap
+	for _, index := range indexsMap {
+		var fieldValueAry []reflect.Value
+		for _, column := range index.IndexColumn {
+			fieldValue := reflectVal.FieldByName(column)
+			if err != nil {
+				log.Error("indexIsExistData GetFieldValue(%s) err:%v", column, err)
+				return 0, err
+			}
+			//fmt.Printf("IndexUpdate k:%v, index:%v, fieldValue:%v\n", column, index, fieldValue)
+			fieldValueAry = append(fieldValueAry, fieldValue)
+		}
+		switch index.Type {
+		case IndexType_IdMember:
+			if !index.IsUnique {
+				break
+			}
+			if len(index.IndexColumn) > 2 {
+				return 0, Err_IndexErrorCombinedOver
+			}
+			var score int64
+			switch fieldValueAry[0].Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
+				fallthrough
+			case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+				score = fieldValueAry[0].Int()
+			case reflect.String:
+				SetInt64FromStr(&score, fieldValueAry[0].String())
+			default:
+				SetInt64FromStr(&score, fmt.Sprintf("%v", fieldValueAry[0].Interface()))
+			}
+			if len(fieldValueAry) == 2 {
+				score = score << 32
+				switch fieldValueAry[1].Kind() {
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
+					fallthrough
+				case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+					score = score | fieldValueAry[1].Int()
+				case reflect.String:
+					var subScore int32
+					SetInt32FromStr(&subScore, fieldValueAry[1].String())
+					score = score | int64(subScore)
+				default:
+					var subScore int32
+					SetInt32FromStr(&subScore, fmt.Sprintf("%v", fieldValueAry[1].Interface()))
+					score = score | int64(subScore)
+				}
+			}
+			//log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
+			val, err := e.redisClient.ZRangeByScore(index.NameKey, redis.ZRangeBy{
+				Min:    ToString(score),
+				Max:    ToString(score),
+				Offset: 0,
+				Count:  1,
+			}).Result()
+			if err != nil {
+				log.Warn("indexIsExistData ZCount%s:%v,err:%v", index.NameKey, score, err)
+			} else if len(val) > 0 {
+				var pkOldId int64
+				SetInt64FromStr(&pkOldId, val[0])
+				return pkOldId, nil
+			}
+		case IndexType_IdScore:
+			var members []string
+			for _, fieldValue := range fieldValueAry {
+				if fieldValue.IsValid() {
+					members = append(members, ToString(fieldValue.Interface()))
+				}
+			}
+			//log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
+			pkOldId, err := e.redisClient.ZScore(index.NameKey, strings.Join(members, "&")).Result()
+			if err != nil {
+				log.Warn("indexIsExistData %s:%v,err:%v", index.NameKey, strings.Join(members, "&"), err)
+			} else {
+				return int64(pkOldId), nil
+			}
+		case IndexType_UnSupport:
+			log.Error("indexIsExistData unsupport index type")
+		}
+	}
+	return 0, nil
 }
 
 //todo: no thread safety! watch?
@@ -122,44 +221,74 @@ func (e *Engine) indexUpdate(bean interface{}) error {
 	if pkFieldValue.Kind() != reflect.Int64 {
 		return Err_PrimaryKeyTypeInvalid
 	}
-	fmt.Printf("pkFieldValue:%v,int:%d\n", pkFieldValue, pkFieldValue.Int())
+	//fmt.Printf("pkFieldValue:%v,int:%d\n", pkFieldValue, pkFieldValue.Int())
 	indexsMap := table.IndexesMap
 	for _, index := range indexsMap {
-		fieldValue := reflectVal.FieldByName(index.ColumnName[0])
-		if err != nil {
-			log.Error("IndexUpdate GetFieldValue(%s) err:%v", index.ColumnName, err)
-			return err
+		var fieldValueAry []reflect.Value
+		for _, column := range index.IndexColumn {
+			fieldValue := reflectVal.FieldByName(column)
+			if err != nil {
+				log.Error("IndexUpdate GetFieldValue(%s) err:%v", column, err)
+				return err
+			}
+			//fmt.Printf("IndexUpdate k:%v, index:%v, fieldValue:%v\n", column, index, fieldValue)
+			fieldValueAry = append(fieldValueAry, fieldValue)
 		}
-		fmt.Printf("IndexUpdate k:%v, index:%v, fieldValue:%v\n", index.ColumnName, index, fieldValue)
 		switch index.Type {
 		case IndexType_IdMember:
-			var score float64
-			switch fieldValue.Kind() {
+			if len(index.IndexColumn) > 2 {
+				return Err_IndexErrorCombinedOver
+			}
+			var score int64
+			switch fieldValueAry[0].Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
 				fallthrough
 			case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
-				score = float64(fieldValue.Int())
+				score = fieldValueAry[0].Int()
 			case reflect.String:
-				SetFloat64FromStr(&score, fieldValue.String())
+				SetInt64FromStr(&score, fieldValueAry[0].String())
 			default:
-				SetFloat64FromStr(&score, fmt.Sprintf("%v", fieldValue.Interface()))
+				SetInt64FromStr(&score, fmt.Sprintf("%v", fieldValueAry[0].Interface()))
+			}
+			if len(fieldValueAry) == 2 {
+				score = score << 32
+				switch fieldValueAry[1].Kind() {
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
+					fallthrough
+				case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+					score = score | fieldValueAry[1].Int()
+				case reflect.String:
+					var subScore int32
+					SetInt32FromStr(&subScore, fieldValueAry[1].String())
+					score = score | int64(subScore)
+				default:
+					var subScore int32
+					SetInt32FromStr(&subScore, fmt.Sprintf("%v", fieldValueAry[1].Interface()))
+					score = score | int64(subScore)
+				}
 			}
 			redisZ := redis.Z{
 				Member: pkFieldValue.Int(),
-				Score:  score,
+				Score:  float64(score),
 			}
-			log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
+			//log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
 			_, err = e.redisClient.ZAdd(index.NameKey, redisZ).Result()
 			if err != nil {
 				log.Warn("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
 			}
 		case IndexType_IdScore:
+			var members []string
+			for _, fieldValue := range fieldValueAry {
+				if fieldValue.IsValid() {
+					members = append(members, ToString(fieldValue.Interface()))
+				}
+			}
 			redisZ := redis.Z{
-				Member: fieldValue.Interface(),
+				Member: strings.Join(members, "&"),
 				Score:  float64(pkFieldValue.Int()),
 			}
-			log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
-			_, err = e.redisClient.ZAdd(index.NameKey, redisZ).Result()
+			//log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
+			_, err = e.redisClient.ZAddNX(index.NameKey, redisZ).Result()
 			if err != nil {
 				log.Warn("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
 			}

@@ -1,13 +1,16 @@
 package redis_orm
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"time"
 )
 
 //todo: SearchCondition not a elegant way..
+/*
+only support one searchCondition to get or find
+todo: where a=a and b=b and c>c order by d desc
+*/
 func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (bool, error) {
 	table, err := e.GetTable(bean)
 	if err != nil {
@@ -45,7 +48,7 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 	pkInt := pkFieldValue.Int()
 
 	getId, err := e.indexGetId(&SearchCondition{
-		SearchColumn:  table.PrimaryKey,
+		SearchColumn:  []string{table.PrimaryKey},
 		IndexType:     IndexType_IdMember,
 		FieldMinValue: pkInt,
 		FieldMaxValue: pkInt,
@@ -71,7 +74,7 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 	if len(fields) != len(valAry) {
 		return false, Err_FieldValueInvalid
 	}
-	fmt.Printf("valAry:%v", valAry)
+	//fmt.Printf("valAry:%v", valAry)
 	//todo: more safe assignment way？
 	for i, val := range valAry {
 		if val == nil && table.ColumnsSeq[i] == table.PrimaryKey {
@@ -81,35 +84,42 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 			continue
 		}
 		colValue := reflectVal.FieldByName(table.ColumnsSeq[i])
-		switch colValue.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
-			var valInt int64
-			SetInt64FromStr(&valInt, val.(string))
-			colValue.SetInt(valInt)
-		case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
-			var valInt uint64
-			SetUint64FromStr(&valInt, val.(string))
-			colValue.SetUint(valInt)
-		case reflect.String:
-			colValue.SetString(val.(string))
-		default:
-			colValue.Set(reflect.ValueOf(val))
-		}
+		//switch colValue.Kind() {
+		//case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
+		//	var valInt int64
+		//	SetInt64FromStr(&valInt, val.(string))
+		//	colValue.SetInt(valInt)
+		//case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+		//	var valInt uint64
+		//	SetUint64FromStr(&valInt, val.(string))
+		//	colValue.SetUint(valInt)
+		//case reflect.String:
+		//	colValue.SetString(val.(string))
+		//default:
+		//	colValue.Set(reflect.ValueOf(val))
+		//}
+		SetValue(val, &colValue)
 	}
 
 	return true, nil
 }
-
 func (e *Engine) Find(limit, offset int64, searchCon *SearchCondition, beanAry []interface{}) (int64, error) {
 
 	return 0, nil
 }
 
-//todo:unique index is exist?
+//Done:unique index is exist? -> indexIsExistData
 func (e *Engine) Insert(bean interface{}) error {
 	table, err := e.GetTable(bean)
 	if err != nil {
 		return err
+	}
+	pkOldId, err := e.indexIsExistData(bean)
+	if err != nil {
+		return err
+	}
+	if pkOldId > 0 {
+		return Err_DataHadAvailable
 	}
 	var lastId int64
 	if table.AutoIncrement != "" {
@@ -136,10 +146,8 @@ func (e *Engine) Insert(bean interface{}) error {
 			valMap[fieldName] = time.Now().In(e.TZLocation).Unix()
 		} else {
 			colValue := reflectVal.FieldByName(colName)
+			SetDefaultValue(col, &colValue)
 			valMap[fieldName] = ToString(colValue.Interface())
-			if valMap[fieldName] == "" && col.DefaultValue != "" {
-				valMap[fieldName] = col.DefaultValue
-			}
 		}
 	}
 	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
@@ -153,6 +161,7 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	if err != nil {
 		return err
 	}
+
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
@@ -163,18 +172,29 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 
 	pkInt := pkFieldValue.Int()
 
-	getId, err := e.indexGetId(&SearchCondition{
-		SearchColumn:  table.PrimaryKey,
-		IndexType:     IndexType_IdMember,
-		FieldMinValue: pkInt,
-		FieldMaxValue: pkInt,
-	}, bean)
+	pkOldId, err := e.indexIsExistData(bean)
 	if err != nil {
 		return err
 	}
-	if getId == 0 {
+	if pkOldId == 0 {
 		return Err_DataNotAvailable
 	}
+	if pkOldId != pkInt {
+		return Err_DataHadAvailable
+	}
+
+	//getId, err := e.indexGetId(&SearchCondition{
+	//	SearchColumn:  []string{table.PrimaryKey},
+	//	IndexType:     IndexType_IdMember,
+	//	FieldMinValue: pkInt,
+	//	FieldMaxValue: pkInt,
+	//}, bean)
+	//if err != nil {
+	//	return err
+	//}
+	//if getId == 0 {
+	//	return Err_DataNotAvailable
+	//}
 
 	valMap := make(map[string]interface{})
 
@@ -218,6 +238,19 @@ func (e *Engine) Delete(bean interface{}) error {
 	}
 
 	pkInt := pkFieldValue.Int()
+
+	getId, err := e.indexGetId(&SearchCondition{
+		SearchColumn:  []string{table.PrimaryKey},
+		IndexType:     IndexType_IdMember,
+		FieldMinValue: pkInt,
+		FieldMaxValue: pkInt,
+	}, bean)
+	if err != nil {
+		return err
+	}
+	if getId == 0 {
+		return Err_DataNotAvailable
+	}
 
 	fields := make([]string, 0)
 	for _, colName := range table.ColumnsSeq {

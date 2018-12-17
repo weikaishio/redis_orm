@@ -1,7 +1,7 @@
 package redis_orm
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -26,6 +26,7 @@ import (
 自增
 默认值
 
+todo:session for thread safe
 */
 
 type Engine struct {
@@ -97,14 +98,16 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 			for j, key := range tags {
 				keyLower := strings.ToLower(key)
 				if keyLower == TagIndex {
-					table.AddIndex(fieldType, col.Name)
+					table.AddIndex(fieldType, col.Name, col.Name, false)
+				} else if keyLower == TagUniqueIndex {
+					table.AddIndex(fieldType, col.Name, col.Name, true)
 				} else if keyLower == TagDefaultValue {
 					if len(tags) > j {
 						col.DefaultValue = strings.Trim(tags[j+1], "'")
 					}
 				} else if keyLower == TagPrimaryKey {
 					col.IsPrimaryKey = true
-					table.AddIndex(fieldType, col.Name)
+					table.AddIndex(fieldType, col.Name, col.Name, false)
 				} else if keyLower == TagAutoIncrement {
 					col.IsAutoIncrement = true
 				} else if keyLower == TagComment {
@@ -116,8 +119,10 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 				} else if keyLower == TagUpdatedAt {
 					col.IsUpdated = true
 				} else if keyLower == TagCombinedindex {
-					//todo:combined index
-					table.AddIndex(fieldType, col.Name)
+					//Done:combined index
+					if len(tags) > j {
+						table.AddIndex(fieldType, tags[j+1], col.Name, false)
+					}
 					continue
 				} else {
 					//abondon
@@ -129,8 +134,8 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 		}
 	}
 
-	bys, _ := json.Marshal(table)
-	log.Trace("table:%v", string(bys))
+	//bys, _ := json.Marshal(table)
+	//log.Trace("table:%v", string(bys))
 	return table, nil
 }
 func splitTag(tag string) (tags []string) {
@@ -164,4 +169,52 @@ func (e *Engine) DropTable(bean interface{}) error {
 //keys tb:*
 func (e *Engine) ShowTables() []string {
 	return nil
+}
+
+func SetDefaultValue(col *Column, value *reflect.Value) {
+	switch value.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if value.Int() == 0 {
+			var valInt int64
+			SetInt64FromStr(&valInt, col.DefaultValue)
+			value.SetInt(valInt)
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if value.Uint() == 0 {
+			var valInt uint64
+			SetUint64FromStr(&valInt, col.DefaultValue)
+			value.SetUint(valInt)
+		}
+	case reflect.Float32, reflect.Float64:
+		if value.Float() == 0 {
+			var valInt float64
+			SetFloat64FromStr(&valInt, col.DefaultValue)
+			value.SetFloat(valInt)
+		}
+	case reflect.String:
+		if ToString(value.Interface()) == "" {
+			value.SetString(col.DefaultValue)
+		}
+	default:
+	}
+}
+func SetValue(val interface{}, value *reflect.Value) {
+	switch value.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		var valInt int64
+		SetInt64FromStr(&valInt, ToString(val))
+		value.SetInt(valInt)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		var valInt uint64
+		SetUint64FromStr(&valInt, ToString(val))
+		value.SetUint(valInt)
+	case reflect.Float32, reflect.Float64:
+		var valInt float64
+		SetFloat64FromStr(&valInt, ToString(val))
+		value.SetFloat(valInt)
+	case reflect.String:
+		value.SetString(ToString(val))
+	default:
+		value.Set(reflect.ValueOf(val))
+	}
 }
