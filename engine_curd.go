@@ -6,39 +6,63 @@ import (
 	"time"
 )
 
-//todo: SearchCondition not a elegant way..
 /*
 only support one searchCondition to get or find
-todo: where a=a and b=b and c>c order by d desc
+todo: SearchCondition not a elegant way..
 */
 func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (bool, error) {
-	table, err := e.GetTable(bean)
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
 	if err != nil {
 		return false, err
 	}
 
-	getId, err := e.indexGetId(searchCon, bean)
+	getId, err := e.indexGetId(table, searchCon)
 	if err != nil {
 		return false, err
 	}
 	if getId == 0 {
 		return false, Err_DataNotAvailable
 	}
-
-	beanValue := reflect.ValueOf(bean)
-	reflectVal := reflect.Indirect(beanValue)
 	colValue := reflectVal.FieldByName(table.PrimaryKey)
 	colValue.SetInt(getId)
 
+	fields := make([]string, 0)
+	for _, colName := range table.ColumnsSeq {
+		fieldName := GetFieldName(getId, colName)
+		fields = append(fields, fieldName)
+	}
+	valAry, err := e.redisClient.HMGet(table.GetTableKey(), fields...).Result()
+	if err != nil {
+		return false, err
+	} else if valAry == nil {
+		return false, nil
+	}
+	if len(fields) != len(valAry) {
+		return false, Err_FieldValueInvalid
+	}
+	//todo: any other safer assignment way？
+	for i, val := range valAry {
+		if val == nil && table.ColumnsSeq[i] == table.PrimaryKey {
+			return false, nil
+		}
+		if val == nil {
+			continue
+		}
+		colValue := reflectVal.FieldByName(table.ColumnsSeq[i])
+
+		SetValue(val, &colValue)
+	}
 	return e.Get(bean)
 }
 func (e *Engine) Get(bean interface{}) (bool, error) {
-	table, err := e.GetTable(bean)
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
 	if err != nil {
 		return false, err
 	}
-	beanValue := reflect.ValueOf(bean)
-	reflectVal := reflect.Indirect(beanValue)
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
 	if pkFieldValue.Kind() != reflect.Int64 {
@@ -47,12 +71,12 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 
 	pkInt := pkFieldValue.Int()
 
-	getId, err := e.indexGetId(&SearchCondition{
+	getId, err := e.indexGetId(table, &SearchCondition{
 		SearchColumn:  []string{table.PrimaryKey},
 		IndexType:     IndexType_IdMember,
 		FieldMinValue: pkInt,
 		FieldMaxValue: pkInt,
-	}, bean)
+	})
 	if err != nil {
 		return false, err
 	}
@@ -74,8 +98,6 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 	if len(fields) != len(valAry) {
 		return false, Err_FieldValueInvalid
 	}
-	//fmt.Printf("valAry:%v", valAry)
-	//todo: more safe assignment way？
 	for i, val := range valAry {
 		if val == nil && table.ColumnsSeq[i] == table.PrimaryKey {
 			return false, nil
@@ -84,37 +106,132 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 			continue
 		}
 		colValue := reflectVal.FieldByName(table.ColumnsSeq[i])
-		//switch colValue.Kind() {
-		//case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
-		//	var valInt int64
-		//	SetInt64FromStr(&valInt, val.(string))
-		//	colValue.SetInt(valInt)
-		//case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
-		//	var valInt uint64
-		//	SetUint64FromStr(&valInt, val.(string))
-		//	colValue.SetUint(valInt)
-		//case reflect.String:
-		//	colValue.SetString(val.(string))
-		//default:
-		//	colValue.Set(reflect.ValueOf(val))
-		//}
+
 		SetValue(val, &colValue)
 	}
 
 	return true, nil
 }
-func (e *Engine) Find(limit, offset int64, searchCon *SearchCondition, beanAry []interface{}) (int64, error) {
+func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry interface{}) (int64, error) {
+	sliceValue := reflect.Indirect(reflect.ValueOf(beanAry))
+	if sliceValue.Kind() != reflect.Slice {
+		return 0, Err_NeedPointer
+	}
 
-	return 0, nil
+	var (
+		table      *Table
+		err        error
+		reflectVal reflect.Value
+	)
+	sliceElementType := sliceValue.Type().Elem()
+	if sliceElementType.Kind() == reflect.Ptr {
+		if sliceElementType.Elem().Kind() == reflect.Struct {
+			beanValue := reflect.New(sliceElementType.Elem())
+			reflectVal = reflect.Indirect(beanValue)
+			table, err = e.GetTable(beanValue, reflectVal)
+			if err != nil {
+				return 0, err
+			}
+		}
+	} else if sliceElementType.Kind() == reflect.Struct {
+		beanValue := reflect.New(sliceElementType)
+		reflectVal = reflect.Indirect(beanValue)
+		table, err = e.GetTable(beanValue, reflectVal)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if table == nil {
+		return 0, Err_UnSupportedTableModel
+	}
+	count, err := e.indexCount(table, searchCon)
+	if err != nil {
+		return 0, nil
+	}
+	idAry, err := e.indexRange(table, searchCon, offset, limit)
+	if err != nil {
+		return 0, nil
+	}
+
+	fields := make([]string, 0)
+	for _, id := range idAry {
+		for _, colName := range table.ColumnsSeq {
+			fieldName := GetFieldName(id, colName)
+			fields = append(fields, fieldName)
+		}
+	}
+	valAry, err := e.redisClient.HMGet(table.GetTableKey(), fields...).Result()
+	if err != nil {
+		return 0, err
+	} else if valAry == nil {
+		return 0, nil
+	}
+	if len(fields) != len(valAry) {
+		return 0, Err_FieldValueInvalid
+	}
+	//e.Printf("sliceElementType:%v", sliceElementType)
+	elemType := sliceElementType
+	var isPointer bool
+	if elemType.Kind() == reflect.Ptr {
+		isPointer = true
+		elemType = elemType.Elem()
+	}
+	if elemType.Kind() == reflect.Ptr {
+		return 0, Err_NotSupportPointer2Pointer
+	}
+
+	//2、
+	//newElemFunc := func(fields []string) reflect.Value {
+	//	switch elemType.Kind() {
+	//	case reflect.Slice:
+	//		slice := reflect.MakeSlice(elemType, len(fields), len(fields))
+	//		x := reflect.New(slice.Type())
+	//		x.Elem().Set(slice)
+	//		return x
+	//	default:
+	//		return reflect.New(elemType)
+	//	}
+	//}
+
+	for i := 0; i < len(fields); i += len(table.ColumnsSeq) {
+		var beanValue reflect.Value
+		//1、
+		if isPointer {
+			beanValue = reflect.New(sliceElementType.Elem())
+		} else {
+			beanValue = reflect.New(sliceElementType)
+		}
+		//2、beanValue=newElemFunc(table.ColumnsSeq)
+		reflectElemVal := reflect.Indirect(beanValue)
+		for j, colName := range table.ColumnsSeq {
+			if valAry[i+j] == nil && colName == table.PrimaryKey {
+				break
+			}
+			if valAry[i+j] == nil {
+				continue
+			}
+			colValue := reflectElemVal.FieldByName(colName)
+			SetValue(valAry[i+j], &colValue)
+		}
+
+		if isPointer {
+			sliceValue.Set(reflect.Append(sliceValue, (&beanValue).Elem().Addr()))
+		} else {
+			sliceValue.Set(reflect.Append(sliceValue, (&beanValue).Elem()))
+		}
+	}
+	return count, nil
 }
 
 //Done:unique index is exist? -> indexIsExistData
 func (e *Engine) Insert(bean interface{}) error {
-	table, err := e.GetTable(bean)
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
 	if err != nil {
 		return err
 	}
-	pkOldId, err := e.indexIsExistData(bean)
+	pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal)
 	if err != nil {
 		return err
 	}
@@ -129,9 +246,6 @@ func (e *Engine) Insert(bean interface{}) error {
 		}
 	}
 
-	beanValue := reflect.ValueOf(bean)
-	reflectVal := reflect.Indirect(beanValue)
-
 	valMap := make(map[string]interface{})
 
 	for colName, col := range table.ColumnsMap {
@@ -140,7 +254,7 @@ func (e *Engine) Insert(bean interface{}) error {
 			valMap[fieldName] = ToString(lastId)
 			colValue := reflectVal.FieldByName(colName)
 			colValue.SetInt(lastId)
-		} else if col.IsUpdated {
+		} else if col.IsUpdated || col.IsCombinedIndex {
 
 		} else if col.IsCreated {
 			valMap[fieldName] = time.Now().In(e.TZLocation).Unix()
@@ -152,18 +266,17 @@ func (e *Engine) Insert(bean interface{}) error {
 	}
 	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
 	if err == nil {
-		e.indexUpdate(bean)
+		e.indexUpdate(table, beanValue, reflectVal)
 	}
 	return nil
 }
 func (e *Engine) Update(bean interface{}, cols ...string) error {
-	table, err := e.GetTable(bean)
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
 	if err != nil {
 		return err
 	}
-
-	beanValue := reflect.ValueOf(bean)
-	reflectVal := reflect.Indirect(beanValue)
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
 	if pkFieldValue.Kind() != reflect.Int64 {
@@ -172,7 +285,7 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 
 	pkInt := pkFieldValue.Int()
 
-	pkOldId, err := e.indexIsExistData(bean)
+	pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal)
 	if err != nil {
 		return err
 	}
@@ -220,17 +333,17 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	}
 	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
 	if err == nil {
-		e.indexUpdate(bean)
+		e.indexUpdate(table, beanValue, reflectVal)
 	}
 	return nil
 }
 func (e *Engine) Delete(bean interface{}) error {
-	table, err := e.GetTable(bean)
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
 	if err != nil {
 		return err
 	}
-	beanValue := reflect.ValueOf(bean)
-	reflectVal := reflect.Indirect(beanValue)
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
 	if pkFieldValue.Kind() != reflect.Int64 {
@@ -239,12 +352,12 @@ func (e *Engine) Delete(bean interface{}) error {
 
 	pkInt := pkFieldValue.Int()
 
-	getId, err := e.indexGetId(&SearchCondition{
+	getId, err := e.indexGetId(table, &SearchCondition{
 		SearchColumn:  []string{table.PrimaryKey},
 		IndexType:     IndexType_IdMember,
 		FieldMinValue: pkInt,
 		FieldMaxValue: pkInt,
-	}, bean)
+	})
 	if err != nil {
 		return err
 	}
@@ -260,7 +373,28 @@ func (e *Engine) Delete(bean interface{}) error {
 
 	_, err = e.redisClient.HDel(table.GetTableKey(), fields...).Result()
 	if err == nil {
-		e.indexDelete(bean)
+		e.indexDelete(table, beanValue, reflectVal)
 	}
 	return nil
+}
+
+//del the hashkey, it will del all elements for this hash
+func (e *Engine) TableDrop(bean interface{}) error {
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
+	if err != nil {
+		return err
+	}
+	_, err = e.redisClient.Del(table.GetTableKey()).Result()
+	if err != nil {
+		return err
+	}
+	err = e.indexDrop(table)
+	return err
+}
+
+//del the hashkey, it will del all elements for this hash
+func (e *Engine) TableTruncate(bean interface{}) error {
+	return e.TableDrop(bean)
 }

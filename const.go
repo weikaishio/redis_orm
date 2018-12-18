@@ -16,7 +16,7 @@ const (
 		1、id作为score, 可以组合但是member唯一，唯一查询可用
 		此情况下的组合索引，直接按顺序拼接即可
 
-		2、id作为member，同一个member只能有一个score，数值索引可用，可以查询范围
+		2、该字段类型必须是长整型，id作为member，同一个member只能有一个score，数值索引可用，可以查询范围
 		此情况下的组合索引，仅仅支持两整型字段，左边32位 右边32位，支持范围查询的放左边
 	*/
 	TagCombinedindex = "combinedindex"
@@ -42,14 +42,20 @@ const (
 )
 
 var (
-	ERR_UnKnowField            = errors.New("redis-orm-error:unknow field")
-	ERR_UnKnowError            = errors.New("redis-orm-error:unknow error")
-	ERR_NotSupportIndexField   = errors.New("redis-orm-error:not support this filed's index")
-	Err_UnSupportedType        = errors.New("redis-orm-error:unsupported type")
-	Err_FieldValueInvalid      = errors.New("redis-orm-error:field value invalid")
-	Err_PrimaryKeyNotFound     = errors.New("redis-orm-error:primarykey not found")
-	Err_PrimaryKeyTypeInvalid  = errors.New("redis-orm-error:primarykey type invalid")
-	Err_DataNotAvailable       = errors.New("redis-orm-error:data not exist")
-	Err_DataHadAvailable       = errors.New("redis-orm-error:data had exist")
-	Err_IndexErrorCombinedOver = errors.New("redis-orm-error:combined index not support more than 2 column")
+	ERR_UnKnowField           = errors.New("redis-orm-error:unknow field")
+	ERR_UnKnowError           = errors.New("redis-orm-error:unknow error")
+	ERR_NotSupportIndexField  = errors.New("redis-orm-error:not support this filed's index")
+	Err_UnSupportedType       = errors.New("redis-orm-error:unsupported type")
+	Err_UnSupportedTableModel = errors.New("redis-orm-error:unsupported table model")
+	Err_FieldValueInvalid     = errors.New("redis-orm-error:field value invalid")
+	Err_PrimaryKeyNotFound    = errors.New("redis-orm-error:primarykey not found")
+	Err_PrimaryKeyTypeInvalid = errors.New("redis-orm-error:primarykey type invalid")
+
+	Err_MoreThanOneIncrementColumn = errors.New("redis-orm-error:more than one increment column")
+	Err_DataNotAvailable           = errors.New("redis-orm-error:data not exist")
+	Err_DataHadAvailable           = errors.New("redis-orm-error:data had exist")
+	Err_CombinedIndexColCountOver  = errors.New("redis-orm-error:combined index not support more than 2 column")
+	Err_CombinedIndexTypeError     = errors.New("redis-orm-error:combined index not support this type of column")
+	Err_NeedPointer =errors.New("needs a pointer to a value")
+	Err_NotSupportPointer2Pointer=errors.New("pointer to pointer is not supported")
 )

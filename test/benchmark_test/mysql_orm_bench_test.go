@@ -43,6 +43,7 @@ func Benchmark_MysqlOrmInsert(b *testing.B) {
 		faq := &models.FaqTb{
 			Title: fmt.Sprintf("title%d", i),
 			Content:fmt.Sprintf("contente%d",i),
+			Hearts:  i,
 		}
 		orm.InsertOne(faq)
 	}

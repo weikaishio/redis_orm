@@ -72,6 +72,9 @@ func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName string, i
 	table.mutex.Unlock()
 }
 func (table *Table) AddColumn(col *Column) {
+	if col.IsCombinedIndex {
+		return
+	}
 	table.ColumnsSeq = append(table.ColumnsSeq, col.Name)
 	colName := col.Name
 	table.ColumnsMap[colName] = col

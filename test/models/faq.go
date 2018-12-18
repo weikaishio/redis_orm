@@ -1,16 +1,16 @@
 package models
 
 type Faq struct {
-	Id        int64  `redis_orm:"pk autoincr comment 'ID'"`
-	Unique    int    `redis_orm:"unique comment '唯一'"`
-	Type      int    `redis_orm:"dft 1 comment '类型'"`
-	Title     string `redis_orm:"dft 'faqtitle' index comment '标题'"`
-	Content   string `redis_orm:"dft 'cnt' comment '内容'"`
-	Hearts    int    `redis_orm:"dft 10 comment '点赞数'"`
-	CreatedAt int64  `redis_orm:"created_at comment '创建时间'"`
-	UpdatedAt int64  `redis_orm:"updated_at comment '修改时间'"`
-	TypeTitle string `redis_orm:"combinedindex Type&Title comment '组合索引'"`
-	//TypeHearts int64  `redis_orm:"combinedindex Type&Hearts comment '组合索引(类型&赞数)'"`
+	Id         int64  `redis_orm:"pk autoincr comment 'ID'"`
+	Unique     int64  `redis_orm:"unique comment '唯一'"`
+	Type       int    `redis_orm:"dft 1 comment '类型'"`
+	Title      string `redis_orm:"dft 'faqtitle' index comment '标题'"`
+	Content    string `redis_orm:"dft 'cnt' comment '内容'"`
+	Hearts     int    `redis_orm:"dft 10 comment '点赞数'"`
+	CreatedAt  int64  `redis_orm:"created_at comment '创建时间'"`
+	UpdatedAt  int64  `redis_orm:"updated_at comment '修改时间'"`
+	TypeTitle  string `redis_orm:"combinedindex Type&Title comment '组合索引(类型&标题)'"`
+	TypeHearts int64  `redis_orm:"combinedindex Type&Hearts comment '组合索引(类型&赞数)'"`
 }
 
 /*

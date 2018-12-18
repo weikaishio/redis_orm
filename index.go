@@ -22,6 +22,7 @@ type SearchCondition struct {
 	IndexType     IndexType
 	FieldMaxValue interface{}
 	FieldMinValue interface{}
+	IsAsc         bool
 }
 
 func NewSearchCondition(indexType IndexType, minVal, maxVal interface{}, column ...string) *SearchCondition {

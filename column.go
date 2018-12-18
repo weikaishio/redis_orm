@@ -11,6 +11,7 @@ type Column struct {
 	IsAutoIncrement bool
 	IsCreated       bool
 	IsUpdated       bool
+	IsCombinedIndex bool //it 's only used for judge wherther need insert or delete and so on
 	IsCascade       bool
 	EnumOptions     map[string]int
 	SetOptions      map[string]int

@@ -1,8 +1,6 @@
 package redis_orm
 
 import (
-	//"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -30,29 +28,48 @@ todo:session for thread safe
 */
 
 type Engine struct {
-	redisClient *redis.Client
+	redisClient *RedisClientProxy
 	Tables      map[reflect.Type]*Table
 	tablesMutex *sync.RWMutex
+	isShowLog   bool
 
 	showExecTime bool
 	TZLocation   *time.Location // The timezone of the application
 }
 
 func NewEngine(redisCli *redis.Client) *Engine {
-	return &Engine{
-		redisClient: redisCli,
+	redisCliProxy := NewRedisCliProxy(redisCli)
+	engine := &Engine{
+		redisClient: redisCliProxy,
 		Tables:      make(map[reflect.Type]*Table),
 		tablesMutex: &sync.RWMutex{},
 		TZLocation:  time.Local,
+		isShowLog:   false,
+	}
+	redisCliProxy.engine = engine
+	return engine
+}
+func (e *Engine) IsShowLog(isShow bool) {
+	e.isShowLog = isShow
+}
+func (e *Engine) Printfln(format string, a ...interface{}) {
+	if e.isShowLog {
+		e.Printf(format, a...)
+		fmt.Print("\n")
 	}
 }
 
-func (e *Engine) GetTable(bean interface{}) (*Table, error) {
-	beanValue := reflect.ValueOf(bean)
+//todo: command->redis client
+func (e *Engine) Printf(format string, a ...interface{}) {
+	if e.isShowLog {
+		fmt.Printf(fmt.Sprintf("[redis_orm %s]:%s", time.Now().Format("06-01-02 15:04:05"), format), a...)
+	}
+}
+func (e *Engine) GetTable(beanValue, beanIndirectValue reflect.Value) (*Table, error) {
 	if beanValue.Kind() != reflect.Ptr {
-		return nil, errors.New("needs a pointer to a value")
+		return nil, Err_NeedPointer
 	} else if beanValue.Elem().Kind() == reflect.Ptr {
-		return nil, errors.New("a pointer to a pointer is not allowed")
+		return nil, Err_NotSupportPointer2Pointer
 	}
 
 	if beanValue.Elem().Kind() == reflect.Struct {
@@ -61,7 +78,7 @@ func (e *Engine) GetTable(bean interface{}) (*Table, error) {
 		e.tablesMutex.RUnlock()
 		if !ok {
 			var err error
-			table, err = e.mapTable(reflect.Indirect(beanValue))
+			table, err = e.mapTable(beanIndirectValue)
 			if err != nil {
 				return nil, err
 			}
@@ -72,10 +89,10 @@ func (e *Engine) GetTable(bean interface{}) (*Table, error) {
 
 		return table, nil
 	}
-	return nil, errors.New("not support kind")
+	return nil, Err_UnSupportedType
 }
-func GetFieldName(pkId int64, colName string) string {
-	return fmt.Sprintf("%d_%s", pkId, colName)
+func GetFieldName(pkId interface{}, colName string) string {
+	return fmt.Sprintf("%v_%s", pkId, colName)
 }
 func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 	typ := v.Type()
@@ -86,7 +103,6 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 	for i := 0; i < typ.NumField(); i++ {
 		tag := typ.Field(i).Tag
 		rdsTagStr := tag.Get(TagIdentifier)
-		//fmt.Printf("%d rdsTagStr:%s\n", i, rdsTagStr)
 
 		var col *Column
 		fieldValue := v.Field(i)
@@ -109,6 +125,9 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 					col.IsPrimaryKey = true
 					table.AddIndex(fieldType, col.Name, col.Name, false)
 				} else if keyLower == TagAutoIncrement {
+					if table.AutoIncrement != "" {
+						return nil, Err_MoreThanOneIncrementColumn
+					}
 					col.IsAutoIncrement = true
 				} else if keyLower == TagComment {
 					if len(tags) > j {
@@ -120,9 +139,13 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 					col.IsUpdated = true
 				} else if keyLower == TagCombinedindex {
 					//Done:combined index
+					if fieldType.Kind() != reflect.String && fieldType.Kind() != reflect.Int64 {
+						return nil, Err_CombinedIndexTypeError
+					}
 					if len(tags) > j {
 						table.AddIndex(fieldType, tags[j+1], col.Name, false)
 					}
+					col.IsCombinedIndex = true
 					continue
 				} else {
 					//abondon
@@ -159,11 +182,6 @@ func splitTag(tag string) (tags []string) {
 }
 func (e *Engine) tbName(v reflect.Value) string {
 	return strings.ToLower(v.Type().Name())
-}
-
-//del the hashkey, it will del all elements for this hash
-func (e *Engine) DropTable(bean interface{}) error {
-	return nil
 }
 
 //keys tb:*
