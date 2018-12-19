@@ -277,6 +277,10 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 	if err != nil {
 		return 0, err
 	}
+	if len(cols) == 0 {
+		cols = table.ColumnsSeq
+	}
+
 	idAry, err := e.indexRange(table, searchCon, 0, 10000)
 	if err != nil {
 		return 0, err
@@ -385,6 +389,9 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	if err != nil {
 		return err
 	}
+	if len(cols) == 0 {
+		cols = table.ColumnsSeq
+	}
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
 	if pkFieldValue.Kind() != reflect.Int64 {
@@ -394,6 +401,14 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	pkInt := pkFieldValue.Int()
 
 	pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal, cols...)
+	if err != nil {
+		return err
+	}
+	if pkOldId > 0 && pkOldId != pkInt {
+		return Err_DataHadAvailable
+	}
+
+	pkOldId, err = e.indexIsExistData(table, beanValue, reflectVal, table.PrimaryKey)
 	if err != nil {
 		return err
 	}
