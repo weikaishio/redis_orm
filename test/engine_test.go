@@ -108,16 +108,30 @@ func TestEngine_Update(t *testing.T) {
 	t.Logf("TestEngine_Update err:%v", err)
 }
 
-func TestEngine_Delete(t *testing.T) {
+func TestEngine_UpdateMulti(t *testing.T) {
 	faq := &models.Faq{
-		Id: 1,
+		Title: "test51",
 	}
-	err := engine.Delete(faq)
-	t.Logf("Delete faq:%v, err:%v", faq, err)
+	affectedRow, err := engine.UpdateMulti(faq, redis_orm.NewSearchCondition(
+		redis_orm.IndexType_IdScore,
+		"1",
+		"1",
+		"Id",
+	),
+		"Title")
+	t.Logf("TestEneine_UpdateMulti affectedRow:%d,err:%v", affectedRow, err)
 }
 
-func TestEngine_TableDrop(t *testing.T){
-	faq:=&models.Faq{}
-	err:=engine.TableDrop(faq)
-	t.Logf("TestEngine_TableDrop err:%v", err)
-}
+//func TestEngine_Delete(t *testing.T) {
+//	faq := &models.Faq{
+//		Id: 1,
+//	}
+//	err := engine.Delete(faq)
+//	t.Logf("Delete faq:%v, err:%v", faq, err)
+//}
+//
+//func TestEngine_TableDrop(t *testing.T){
+//	faq:=&models.Faq{}
+//	err:=engine.TableDrop(faq)
+//	t.Logf("TestEngine_TableDrop err:%v", err)
+//}

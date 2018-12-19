@@ -2,7 +2,6 @@ package redis_orm
 
 import (
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -150,7 +149,7 @@ func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry i
 	}
 	idAry, err := e.indexRange(table, searchCon, offset, limit)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 
 	fields := make([]string, 0)
@@ -270,6 +269,115 @@ func (e *Engine) Insert(bean interface{}) error {
 	}
 	return nil
 }
+
+func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
+	if err != nil {
+		return 0, err
+	}
+	idAry, err := e.indexRange(table, searchCon, 0, 10000)
+	if err != nil {
+		return 0, err
+	}
+	if len(idAry) == 0 {
+		return 0, nil
+	}
+	if len(idAry) > 1 {
+		for _, col := range cols {
+			if index, ok := table.IndexesMap[table.GetIndexKey(col)]; ok {
+				if index.Type == IndexType_IdScore { //unique index, can't update more than one data
+					return 0, Err_DataHadAvailable
+				}
+			}
+		}
+
+		for _, v := range table.IndexesMap {
+			if len(v.IndexColumn) > 1 {
+				var meetCount int
+				for _, colIndex := range v.IndexColumn {
+					for _, col := range cols {
+						if col == colIndex {
+							meetCount++
+							break
+						}
+					}
+				}
+				if meetCount == len(v.IndexColumn) { //combinedindex, can't update more than one data
+					return 0, Err_DataHadAvailable
+				}
+			}
+		}
+	}
+
+	valMap := make(map[string]interface{})
+
+	pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal, cols...)
+	if err != nil {
+		return 0, err
+	}
+	e.Printfln("idAry:%v,pkOldId:%d", idAry, pkOldId)
+	if pkOldId > 0 {
+		if len(idAry) > 1 {
+			return 0, Err_DataHadAvailable
+		}
+		if pkOldId > 0 {
+			var pkInt int64
+			SetInt64FromStr(&pkInt, idAry[0])
+			if pkInt != pkOldId {
+				return 0, Err_DataHadAvailable
+			}
+		}
+	}
+
+	for _, pkIntStr := range idAry {
+		for _, colUpdate := range cols {
+			col, ok := table.ColumnsMap[colUpdate]
+			if !ok {
+				continue
+			}
+
+			if col.IsCreated {
+				continue
+			} else if col.IsCombinedIndex {
+				continue
+			} else if col.IsPrimaryKey {
+				continue
+			}
+			if len(idAry) > 0 && col.IsPrimaryKey {
+
+			}
+
+			fieldName := GetFieldName(pkIntStr, colUpdate)
+			if col.IsUpdated {
+				valMap[fieldName] = time.Now().In(e.TZLocation).Unix()
+				continue
+			}
+
+			colValue := reflectVal.FieldByName(colUpdate)
+			if colValue.IsValid() {
+				valMap[fieldName] = ToString(colValue.Interface())
+			} else {
+				valMap[fieldName] = col.DefaultValue
+			}
+		}
+	}
+	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
+	if err == nil {
+		for _, pkIntStr := range idAry {
+			var pkInt int64
+			SetInt64FromStr(&pkInt, pkIntStr)
+
+			colValue := reflectVal.FieldByName(table.PrimaryKey)
+			colValue.SetInt(pkInt)
+
+			e.indexUpdate(table, beanValue, reflectVal, cols...)
+		}
+	}
+
+	return len(idAry), nil
+}
 func (e *Engine) Update(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
@@ -285,7 +393,7 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 
 	pkInt := pkFieldValue.Int()
 
-	pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal)
+	pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal, cols...)
 	if err != nil {
 		return err
 	}
@@ -311,29 +419,36 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 
 	valMap := make(map[string]interface{})
 
-	for colName, col := range table.ColumnsMap {
-		fieldName := GetFieldName(pkInt, colName)
-		for _, colUpdate := range cols {
-			if strings.ToLower(colUpdate) != strings.ToLower(colName) {
-				continue
-			} else if col.IsCreated {
-				continue
-			}
-			colValue := reflectVal.FieldByName(colName)
-			if colValue.IsValid() {
-				valMap[fieldName] = ToString(colValue.Interface())
-			} else {
-				valMap[fieldName] = col.DefaultValue
-			}
+	for _, colUpdate := range cols {
+		col, ok := table.ColumnsMap[colUpdate]
+		if !ok {
+			continue
 		}
+		if col.IsCreated {
+			continue
+		} else if col.IsCombinedIndex {
+			continue
+		} else if col.IsPrimaryKey {
+			continue
+		}
+
+		fieldName := GetFieldName(pkInt, colUpdate)
+
 		if col.IsUpdated {
 			valMap[fieldName] = time.Now().In(e.TZLocation).Unix()
 			continue
 		}
+
+		colValue := reflectVal.FieldByName(colUpdate)
+		if colValue.IsValid() {
+			valMap[fieldName] = ToString(colValue.Interface())
+		} else {
+			valMap[fieldName] = col.DefaultValue
+		}
 	}
 	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
 	if err == nil {
-		e.indexUpdate(table, beanValue, reflectVal)
+		e.indexUpdate(table, beanValue, reflectVal, cols...)
 	}
 	return nil
 }

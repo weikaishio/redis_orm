@@ -149,9 +149,34 @@ func (e *Engine) indexDelete(table *Table, beanValue, reflectVal reflect.Value) 
 	}
 	return nil
 }
+func ColsIsExistIndex(index *Index, cols ...string) bool {
+	isExist := false
+	if len(index.IndexColumn) == 1 {
+		for _, col := range cols {
+			if index.IndexColumn[0] == col {
+				isExist = true
+				break
+			}
+		}
+	} else {
+		var meetCount int
+		for _, colIndex := range index.IndexColumn {
+			for _, col := range cols {
+				if col == colIndex {
+					meetCount++
+					break
+				}
+			}
+		}
+		if meetCount == len(index.IndexColumn) {
+			isExist = true
+		}
+	}
+	return isExist
+}
 
-//当前数据是否已经存在，存在则返回主键ID
-func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Value) (int64, error) {
+//当前数据是否已经存在，存在则返回主键ID，唯一索引的才需要判断是否存在！
+func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Value, cols ...string) (int64, error) {
 	typ := reflectVal.Type()
 	_, has := typ.FieldByName(table.PrimaryKey)
 	if !has {
@@ -160,6 +185,11 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 
 	indexsMap := table.IndexesMap
 	for _, index := range indexsMap {
+		if len(cols) > 0 {
+			if !ColsIsExistIndex(index, cols...) {
+				continue
+			}
+		}
 		var fieldValueAry []reflect.Value
 		for _, column := range index.IndexColumn {
 			fieldValue := reflectVal.FieldByName(column)
@@ -175,10 +205,12 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 			}
 			var score int64
 			switch fieldValueAry[0].Kind() {
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
-				fallthrough
-			case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				score = fieldValueAry[0].Int()
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				score = int64(fieldValueAry[0].Uint())
+			case reflect.Float32, reflect.Float64:
+				score = int64(fieldValueAry[0].Float())
 			case reflect.String:
 				SetInt64FromStr(&score, fieldValueAry[0].String())
 			default:
@@ -187,10 +219,12 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 			if len(fieldValueAry) == 2 {
 				score = score << 32
 				switch fieldValueAry[1].Kind() {
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
-					fallthrough
-				case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 					score = score | fieldValueAry[1].Int()
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					score = score | int64(fieldValueAry[1].Uint())
+				case reflect.Float32, reflect.Float64:
+					score = score | int64(fieldValueAry[1].Float())
 				case reflect.String:
 					var subScore int32
 					SetInt32FromStr(&subScore, fieldValueAry[1].String())
@@ -214,7 +248,9 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 			} else if len(val) > 0 {
 				var pkOldId int64
 				SetInt64FromStr(&pkOldId, val[0])
-				return pkOldId, nil
+				if pkOldId > 0 {
+					return pkOldId, nil
+				}
 			}
 		case IndexType_IdScore:
 			var members []string
@@ -229,7 +265,9 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 				log.Warn("indexIsExistData %s:%v,err:%v", index.NameKey, strings.Join(members, "&"), err)
 				return 0, err
 			} else {
-				return int64(pkOldId), nil
+				if int64(pkOldId) > 0 {
+					return int64(pkOldId), nil
+				}
 			}
 		case IndexType_UnSupport:
 			log.Error("indexIsExistData unsupport index type")
@@ -239,7 +277,7 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 }
 
 //todo: no thread safety! watch?
-func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value) error {
+func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, cols ...string) error {
 	typ := reflectVal.Type()
 	//fmt.Printf("table.PrimaryKey:%s\n", table.PrimaryKey)
 	_, has := typ.FieldByName(table.PrimaryKey)
@@ -253,6 +291,11 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value) 
 	//fmt.Printf("pkFieldValue:%v,int:%d\n", pkFieldValue, pkFieldValue.Int())
 	indexsMap := table.IndexesMap
 	for _, index := range indexsMap {
+		if len(cols) > 0 {
+			if !ColsIsExistIndex(index, cols...) {
+				continue
+			}
+		}
 		var fieldValueAry []reflect.Value
 		for _, column := range index.IndexColumn {
 			fieldValue := reflectVal.FieldByName(column)
@@ -265,10 +308,12 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value) 
 			}
 			var score int64
 			switch fieldValueAry[0].Kind() {
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
-				fallthrough
-			case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				score = fieldValueAry[0].Int()
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				score = int64(fieldValueAry[0].Uint())
+			case reflect.Float32, reflect.Float64:
+				score = int64(fieldValueAry[0].Float())
 			case reflect.String:
 				SetInt64FromStr(&score, fieldValueAry[0].String())
 			default:
@@ -277,10 +322,12 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value) 
 			if len(fieldValueAry) == 2 {
 				score = score << 32
 				switch fieldValueAry[1].Kind() {
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
-					fallthrough
-				case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 					score = score | fieldValueAry[1].Int()
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					score = score | int64(fieldValueAry[1].Uint())
+				case reflect.Float32, reflect.Float64:
+					score = score | int64(fieldValueAry[1].Float())
 				case reflect.String:
 					var subScore int32
 					SetInt32FromStr(&subScore, fieldValueAry[1].String())
@@ -301,6 +348,12 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value) 
 				return err
 			}
 		case IndexType_IdScore:
+			//remove old index
+			_, err := e.redisClient.ZRemRangeByScores(index.NameKey, ToString(pkFieldValue.Int()), ToString(pkFieldValue.Int())).Result()
+			if err != nil {
+				log.Warn("IndexUpdate ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(pkFieldValue.Int()), err)
+				return err
+			}
 			var members []string
 			for _, fieldValue := range fieldValueAry {
 				if fieldValue.IsValid() {
@@ -311,7 +364,7 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value) 
 				Member: strings.Join(members, "&"),
 				Score:  float64(pkFieldValue.Int()),
 			}
-			_, err := e.redisClient.ZAddNX(index.NameKey, redisZ).Result()
+			_, err = e.redisClient.ZAddNX(index.NameKey, redisZ).Result()
 			if err != nil {
 				log.Warn("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
 				return err

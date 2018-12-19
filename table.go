@@ -62,7 +62,7 @@ func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName string, i
 		return
 	}
 	index := &Index{
-		NameKey:     fmt.Sprintf("%s%s_%s", KeyIndexPrefix, strings.ToLower(table.Name), strings.ToLower(columnName)),
+		NameKey:     table.GetIndexKey(columnName),
 		IndexColumn: strings.Split(indexColumn, "&"),
 		Type:        indexType,
 		IsUnique:    isUnique,
@@ -70,6 +70,9 @@ func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName string, i
 	table.mutex.Lock()
 	table.IndexesMap[strings.ToLower(indexColumn)] = index
 	table.mutex.Unlock()
+}
+func (table *Table) GetIndexKey(col string) string {
+	return fmt.Sprintf("%s%s_%s", KeyIndexPrefix, strings.ToLower(table.Name), strings.ToLower(col))
 }
 func (table *Table) AddColumn(col *Column) {
 	if col.IsCombinedIndex {
