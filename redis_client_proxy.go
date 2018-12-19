@@ -13,11 +13,17 @@ func NewRedisCliProxy(redisCli *redis.Client) *RedisClientProxy {
 	}
 }
 func (c *RedisClientProxy) HMSet(key string, fields map[string]interface{}) *redis.StatusCmd {
+	if len(fields) == 0 {
+		return &redis.StatusCmd{}
+	}
 	val := c.redisClient.HMSet(key, fields)
 	c.engine.Printfln("hmset(%s,%v) val:%v", key, fields, *val)
 	return val
 }
 func (c *RedisClientProxy) HMGet(key string, fields ...string) *redis.SliceCmd {
+	if len(fields) == 0 {
+		return &redis.SliceCmd{}
+	}
 	val := c.redisClient.HMGet(key, fields...)
 	c.engine.Printfln("hmget(%s,%v) val:%v", key, fields, *val)
 	return val
@@ -28,11 +34,17 @@ func (c *RedisClientProxy) HIncrBy(key, field string, incr int64) *redis.IntCmd 
 	return val
 }
 func (c *RedisClientProxy) HDel(key string, fields ...string) *redis.IntCmd {
+	if len(fields) == 0 {
+		return &redis.IntCmd{}
+	}
 	val := c.redisClient.HDel(key, fields...)
 	c.engine.Printfln("hdel(%s,%v) val:%v", key, fields, *val)
 	return val
 }
 func (c *RedisClientProxy) Del(keys ...string) *redis.IntCmd {
+	if len(keys) == 0 {
+		return &redis.IntCmd{}
+	}
 	val := c.redisClient.Del(keys...)
 	c.engine.Printfln("del(%v) val:%v", keys, *val)
 	return val
@@ -58,6 +70,9 @@ func (c *RedisClientProxy) ZRevRangeByScore(key string, opt redis.ZRangeBy) *red
 	return val
 }
 func (c *RedisClientProxy) ZRem(key string, members ...interface{}) *redis.IntCmd {
+	if len(members) == 0 {
+		return &redis.IntCmd{}
+	}
 	val := c.redisClient.ZRem(key, members...)
 	c.engine.Printfln("zrem(%s,%v) val:%v", key, members, *val)
 	return val
@@ -68,11 +83,17 @@ func (c *RedisClientProxy) ZRemRangeByScores(key string, min, max string) *redis
 	return val
 }
 func (c *RedisClientProxy) ZAdd(key string, members ...redis.Z) *redis.IntCmd {
+	if len(members) == 0 {
+		return &redis.IntCmd{}
+	}
 	val := c.redisClient.ZAdd(key, members...)
 	c.engine.Printfln("zadd(%s,%v) val:%v", key, members, *val)
 	return val
 }
 func (c *RedisClientProxy) ZAddNX(key string, members ...redis.Z) *redis.IntCmd {
+	if len(members) == 0 {
+		return &redis.IntCmd{}
+	}
 	val := c.redisClient.ZAddNX(key, members...)
 	c.engine.Printfln("zaddnx(%s,%v) val:%v", key, members, *val)
 	return val

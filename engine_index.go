@@ -129,7 +129,6 @@ func (e *Engine) indexDelete(table *Table, beanValue, reflectVal reflect.Value) 
 	indexsMap := table.IndexesMap
 	for _, index := range indexsMap {
 		fieldValue := reflectVal.FieldByName(index.IndexColumn[0])
-		//fmt.Printf("indexDelete k:%v, index:%v, fieldValue:%v\n", index.IndexColumn, index, fieldValue)
 		switch index.Type {
 		case IndexType_IdMember:
 			_, err := e.redisClient.ZRem(index.NameKey, pkFieldValue.Int()).Result()
@@ -197,7 +196,8 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 		}
 		switch index.Type {
 		case IndexType_IdMember:
-			if !index.IsUnique {
+			if !index.IsUnique && index.NameKey != table.GetIndexKey(table.PrimaryKey) {
+				e.Printfln("!index.IsUnique break")
 				break
 			}
 			if len(index.IndexColumn) > 2 {
@@ -279,7 +279,6 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 //todo: no thread safety! watch?
 func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, cols ...string) error {
 	typ := reflectVal.Type()
-	//fmt.Printf("table.PrimaryKey:%s\n", table.PrimaryKey)
 	_, has := typ.FieldByName(table.PrimaryKey)
 	if !has {
 		return Err_PrimaryKeyNotFound
@@ -288,7 +287,6 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 	if pkFieldValue.Kind() != reflect.Int64 {
 		return Err_PrimaryKeyTypeInvalid
 	}
-	//fmt.Printf("pkFieldValue:%v,int:%d\n", pkFieldValue, pkFieldValue.Int())
 	indexsMap := table.IndexesMap
 	for _, index := range indexsMap {
 		if len(cols) > 0 {

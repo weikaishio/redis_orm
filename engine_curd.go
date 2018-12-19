@@ -461,6 +461,9 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 			valMap[fieldName] = col.DefaultValue
 		}
 	}
+	if len(valMap) == 0 {
+		return nil
+	}
 	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
 	if err == nil {
 		e.indexUpdate(table, beanValue, reflectVal, cols...)
