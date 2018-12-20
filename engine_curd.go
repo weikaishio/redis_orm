@@ -271,6 +271,20 @@ func (e *Engine) Insert(bean interface{}) error {
 	return nil
 }
 
+func (e *Engine) GetDefaultValue(bean interface{}) error{
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
+	if err != nil {
+		return err
+	}
+	for colName, col := range table.ColumnsMap {
+		colValue := reflectVal.FieldByName(colName)
+		SetDefaultValue(col, &colValue)
+	}
+	return nil
+}
+
 func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)

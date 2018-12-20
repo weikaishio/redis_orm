@@ -8,8 +8,6 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/mkideal/log"
 	"github.com/weikaishio/redis_orm/test/models"
-	"reflect"
-	"time"
 )
 
 var (
@@ -32,26 +30,33 @@ func init() {
 	log.SetLevelFromString("TRACE")
 }
 
-func TestEngine_GetTable(t *testing.T) {
-	faq := &models.Faq{
-		Title:   "为啥",
-		Content: "我也不知道",
-		Hearts:  20,
-	}
-	val := reflect.ValueOf(faq)
-	table, err := engine.GetTable(val, reflect.Indirect(val))
-	t.Logf("table:%v,err:%v", table, err)
+//func TestEngine_GetTable(t *testing.T) {
+//	faq := &models.Faq{
+//		Title:   "为啥",
+//		Content: "我也不知道",
+//		Hearts:  20,
+//	}
+//	val := reflect.ValueOf(faq)
+//	table, err := engine.GetTable(val, reflect.Indirect(val))
+//	t.Logf("table:%v,err:%v", table, err)
+//}
+
+func TestEngine_GetDefaultValue(t *testing.T) {
+	faq := &models.Faq{}
+	err := engine.GetDefaultValue(faq)
+	bys, _ := json.Marshal(faq)
+	t.Logf("GetDefaultValue faq:%v,err:%v", string(bys), err)
 }
 
-func TestEngine_Insert(t *testing.T) {
-	faq := &models.Faq{
-		Title:  "index",
-		Unique: time.Now().Unix(),
-	}
-	err := engine.Insert(faq)
-	bys, _ := json.Marshal(faq)
-	t.Logf("Insert faq:%v,err:%v", string(bys), err)
-}
+//func TestEngine_Insert(t *testing.T) {
+//	faq := &models.Faq{
+//		Title:  "index",
+//		Unique: time.Now().Unix(),
+//	}
+//	err := engine.Insert(faq)
+//	bys, _ := json.Marshal(faq)
+//	t.Logf("Insert faq:%v,err:%v", string(bys), err)
+//}
 
 func TestEngine_Get(t *testing.T) {
 	faq := &models.Faq{

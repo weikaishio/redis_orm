@@ -16,7 +16,7 @@ type Column struct {
 	EnumOptions     map[string]int
 	SetOptions      map[string]int
 	Comment         string
-	Type            reflect.Type
+	Type            reflect.Type//only support base type
 }
 
 func NewEmptyColumn(colName string) *Column {
