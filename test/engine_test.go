@@ -80,8 +80,8 @@ func TestEngine_Find(t *testing.T) {
 	var faqAry []*models.Faq
 	count, err := engine.Find(0, 3, redis_orm.NewSearchCondition(
 		redis_orm.IndexType_IdScore,
-		"-inf",
-		"+inf",
+		redis_orm.ScoreMin,
+		redis_orm.ScoreMax,
 		"Id",
 	), &faqAry)
 	bys, _ := json.Marshal(faqAry)

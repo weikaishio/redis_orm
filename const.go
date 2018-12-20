@@ -40,6 +40,9 @@ const (
 	KeyIndexPrefix = "ix:"
 	//自增前缀+自增字段名
 	KeyAutoIncrPrefix = "autoincr_last_"
+
+	ScoreMax = "+inf"
+	ScoreMin = "-inf"
 )
 
 var (

@@ -213,6 +213,8 @@ func SetDefaultValue(col *Column, value *reflect.Value) {
 		if ToString(value.Interface()) == "" {
 			value.SetString(col.DefaultValue)
 		}
+	case reflect.Map:
+		//todo:SetValue4Map
 	default:
 	}
 }
@@ -232,6 +234,10 @@ func SetValue(val interface{}, value *reflect.Value) {
 		value.SetFloat(valInt)
 	case reflect.String:
 		value.SetString(ToString(val))
+	case reflect.Map:
+		//todo:SetValue4Map
+		//reflect.TypeOf()
+		//value.Set(reflect.MapOf())
 	default:
 		value.Set(reflect.ValueOf(val))
 	}

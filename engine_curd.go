@@ -249,16 +249,17 @@ func (e *Engine) Insert(bean interface{}) error {
 
 	for colName, col := range table.ColumnsMap {
 		fieldName := GetFieldName(lastId, colName)
+		colValue := reflectVal.FieldByName(colName)
 		if col.IsAutoIncrement {
 			valMap[fieldName] = ToString(lastId)
-			colValue := reflectVal.FieldByName(colName)
 			colValue.SetInt(lastId)
-		} else if col.IsUpdated || col.IsCombinedIndex {
+		} else if col.IsCombinedIndex {
 
-		} else if col.IsCreated {
-			valMap[fieldName] = time.Now().In(e.TZLocation).Unix()
+		} else if col.IsCreated || col.IsUpdated {
+			createdAt := time.Now().In(e.TZLocation).Unix()
+			valMap[fieldName] = createdAt
+			colValue.SetInt(createdAt)
 		} else {
-			colValue := reflectVal.FieldByName(colName)
 			SetDefaultValue(col, &colValue)
 			valMap[fieldName] = ToString(colValue.Interface())
 		}
