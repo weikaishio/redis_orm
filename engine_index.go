@@ -116,30 +116,23 @@ func (e *Engine) indexRange(table *Table, searchCon *SearchCondition, offset, co
 	}
 	return idAry, nil
 }
-func (e *Engine) indexDelete(table *Table, beanValue, reflectVal reflect.Value) error {
-	typ := reflectVal.Type()
-	_, has := typ.FieldByName(table.PrimaryKey)
-	if !has {
+func (e *Engine) indexDelete(table *Table, idInt int64) error {
+	if table.PrimaryKey == "" {
 		return Err_PrimaryKeyNotFound
-	}
-	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
-	if pkFieldValue.Kind() != reflect.Int64 {
-		return Err_PrimaryKeyTypeInvalid
 	}
 	indexsMap := table.IndexesMap
 	for _, index := range indexsMap {
-		fieldValue := reflectVal.FieldByName(index.IndexColumn[0])
 		switch index.Type {
 		case IndexType_IdMember:
-			_, err := e.redisClient.ZRem(index.NameKey, pkFieldValue.Int()).Result()
+			_, err := e.redisClient.ZRem(index.NameKey, idInt).Result()
 			if err != nil {
-				log.Warn("indexDelete %s:%v,err:%v", index.NameKey, pkFieldValue.Int(), err)
+				log.Warn("indexDelete %s:%v,err:%v", index.NameKey, idInt, err)
 				return err
 			}
 		case IndexType_IdScore:
-			_, err := e.redisClient.ZRem(index.NameKey, fieldValue.Interface()).Result()
+			_, err := e.redisClient.ZRemRangeByScores(index.NameKey, ToString(idInt), ToString(idInt)).Result()
 			if err != nil {
-				log.Warn("indexDelete %s:%v,err:%v", index.NameKey, fieldValue.Interface(), err)
+				log.Warn("indexDelete ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(idInt), err)
 				return err
 			}
 		case IndexType_UnSupport:

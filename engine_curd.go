@@ -271,7 +271,7 @@ func (e *Engine) Insert(bean interface{}) error {
 	return nil
 }
 
-func (e *Engine) GetDefaultValue(bean interface{}) error{
+func (e *Engine) GetDefaultValue(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 	table, err := e.GetTable(beanValue, reflectVal)
@@ -485,6 +485,46 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	}
 	return nil
 }
+func (e *Engine) DeleteMulti(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
+	if err != nil {
+		return 0, err
+	}
+	if len(cols) == 0 {
+		cols = table.ColumnsSeq
+	}
+
+	idAry, err := e.indexRange(table, searchCon, 0, 10000)
+	if err != nil {
+		return 0, err
+	}
+	if len(idAry) == 0 {
+		return 0, nil
+	}
+
+	fields := make([]string, 0)
+
+	for _, idStr := range idAry {
+		var pkInt int64
+		SetInt64FromStr(&pkInt, idStr)
+		for _, colName := range table.ColumnsSeq {
+			fieldName := GetFieldName(pkInt, colName)
+			fields = append(fields, fieldName)
+		}
+	}
+
+	_, err = e.redisClient.HDel(table.GetTableKey(), fields...).Result()
+	if err == nil {
+		for _, idStr := range idAry {
+			var pkInt int64
+			SetInt64FromStr(&pkInt, idStr)
+			e.indexDelete(table, pkInt)
+		}
+	}
+	return len(idAry), nil
+}
 func (e *Engine) Delete(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
@@ -521,7 +561,7 @@ func (e *Engine) Delete(bean interface{}) error {
 
 	_, err = e.redisClient.HDel(table.GetTableKey(), fields...).Result()
 	if err == nil {
-		e.indexDelete(table, beanValue, reflectVal)
+		e.indexDelete(table, pkInt)
 	}
 	return nil
 }

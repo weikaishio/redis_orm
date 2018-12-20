@@ -1,12 +1,14 @@
 package test
 
 import (
-	"github.com/weikaishio/redis_orm"
 	"testing"
+	"time"
 
 	"encoding/json"
 	"github.com/go-redis/redis"
 	"github.com/mkideal/log"
+
+	"github.com/weikaishio/redis_orm"
 	"github.com/weikaishio/redis_orm/test/models"
 )
 
@@ -41,22 +43,22 @@ func init() {
 //	t.Logf("table:%v,err:%v", table, err)
 //}
 
-func TestEngine_GetDefaultValue(t *testing.T) {
-	faq := &models.Faq{}
-	err := engine.GetDefaultValue(faq)
-	bys, _ := json.Marshal(faq)
-	t.Logf("GetDefaultValue faq:%v,err:%v", string(bys), err)
-}
-
-//func TestEngine_Insert(t *testing.T) {
-//	faq := &models.Faq{
-//		Title:  "index",
-//		Unique: time.Now().Unix(),
-//	}
-//	err := engine.Insert(faq)
+//func TestEngine_GetDefaultValue(t *testing.T) {
+//	faq := &models.Faq{}
+//	err := engine.GetDefaultValue(faq)
 //	bys, _ := json.Marshal(faq)
-//	t.Logf("Insert faq:%v,err:%v", string(bys), err)
+//	t.Logf("GetDefaultValue faq:%v,err:%v", string(bys), err)
 //}
+
+func TestEngine_Insert(t *testing.T) {
+	faq := &models.Faq{
+		Title:  "index3",
+		Unique: time.Now().Unix(),
+	}
+	err := engine.Insert(faq)
+	bys, _ := json.Marshal(faq)
+	t.Logf("Insert faq:%v,err:%v", string(bys), err)
+}
 
 func TestEngine_Get(t *testing.T) {
 	faq := &models.Faq{
@@ -67,31 +69,31 @@ func TestEngine_Get(t *testing.T) {
 	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
 }
 
-func TestEngine_GetByCombinedIndex(t *testing.T) {
-	faq := &models.Faq{}
-	has, err := engine.GetByCondition(faq, redis_orm.NewSearchCondition(
-		redis_orm.IndexType_IdScore,
-		"1&index",
-		"1&index",
-		"Type",
-		"Title",
-	))
+//func TestEngine_GetByCombinedIndex(t *testing.T) {
+//	faq := &models.Faq{}
+//	has, err := engine.GetByCondition(faq, redis_orm.NewSearchCondition(
+//		redis_orm.IndexType_IdScore,
+//		"1&index",
+//		"1&index",
+//		"Type",
+//		"Title",
+//	))
+//
+//	bys, _ := json.Marshal(faq)
+//	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
+//}
 
-	bys, _ := json.Marshal(faq)
-	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
-}
-
-func TestEngine_Find(t *testing.T) {
-	var faqAry []*models.Faq
-	count, err := engine.Find(0, 3, redis_orm.NewSearchCondition(
-		redis_orm.IndexType_IdScore,
-		redis_orm.ScoreMin,
-		redis_orm.ScoreMax,
-		"Id",
-	), &faqAry)
-	bys, _ := json.Marshal(faqAry)
-	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
-}
+//func TestEngine_Find(t *testing.T) {
+//	var faqAry []*models.Faq
+//	count, err := engine.Find(0, 3, redis_orm.NewSearchCondition(
+//		redis_orm.IndexType_IdScore,
+//		redis_orm.ScoreMin,
+//		redis_orm.ScoreMax,
+//		"Id",
+//	), &faqAry)
+//	bys, _ := json.Marshal(faqAry)
+//	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
+//}
 
 //func TestEngine_Update(t *testing.T) {
 //	faq := &models.Faq{
@@ -102,19 +104,19 @@ func TestEngine_Find(t *testing.T) {
 //	t.Logf("TestEngine_Update err:%v", err)
 //}
 
-func TestEngine_UpdateMulti(t *testing.T) {
-	faq := &models.Faq{
-		Title: "test51",
-	}
-	affectedRow, err := engine.UpdateMulti(faq, redis_orm.NewSearchCondition(
-		redis_orm.IndexType_IdScore,
-		"1",
-		"1",
-		"Id",
-	),
-		"Title")
-	t.Logf("TestEneine_UpdateMulti affectedRow:%d,err:%v", affectedRow, err)
-}
+//func TestEngine_UpdateMulti(t *testing.T) {
+//	faq := &models.Faq{
+//		Title: "test51",
+//	}
+//	affectedRow, err := engine.UpdateMulti(faq, redis_orm.NewSearchCondition(
+//		redis_orm.IndexType_IdScore,
+//		"1",
+//		"1",
+//		"Id",
+//	),
+//		"Title")
+//	t.Logf("TestEneine_UpdateMulti affectedRow:%d,err:%v", affectedRow, err)
+//}
 
 //func TestEngine_Delete(t *testing.T) {
 //	faq := &models.Faq{
@@ -129,3 +131,16 @@ func TestEngine_UpdateMulti(t *testing.T) {
 //	err:=engine.TableDrop(faq)
 //	t.Logf("TestEngine_TableDrop err:%v", err)
 //}
+func TestEngine_DeleteMulti(t *testing.T){
+	faq := &models.Faq{
+		Title: "test51",
+	}
+	affectedRow, err := engine.DeleteMulti(faq, redis_orm.NewSearchCondition(
+		redis_orm.IndexType_IdScore,
+		"1",
+		"4",
+		"Id",
+	),
+		"Title")
+	t.Logf("TestEngine_DeleteMulti affectedRow:%d,err:%v", affectedRow, err)
+}
