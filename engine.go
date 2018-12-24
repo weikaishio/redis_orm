@@ -186,10 +186,19 @@ func (e *Engine) tbName(v reflect.Value) string {
 
 //keys tb:*
 func (e *Engine) ShowTables() []string {
-	return nil
+	e.tablesMutex.RLock()
+	defer e.tablesMutex.RUnlock()
+	tableAry := make([]string, 0)
+	for _, v := range e.Tables {
+		tableAry = append(tableAry, v.Name)
+	}
+	return tableAry
 }
 
 func SetDefaultValue(col *Column, value *reflect.Value) {
+	if !value.CanSet() {
+		return
+	}
 	switch value.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if value.Int() == 0 {
@@ -219,6 +228,9 @@ func SetDefaultValue(col *Column, value *reflect.Value) {
 	}
 }
 func SetValue(val interface{}, value *reflect.Value) {
+	if !value.CanSet() {
+		return
+	}
 	switch value.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		var valInt int64

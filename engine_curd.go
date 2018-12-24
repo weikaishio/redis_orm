@@ -111,6 +111,44 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 
 	return true, nil
 }
+func (e *Engine) Count(searchCon *SearchCondition, beanAry interface{}) (int64, error) {
+	sliceValue := reflect.Indirect(reflect.ValueOf(beanAry))
+	if sliceValue.Kind() != reflect.Slice {
+		return 0, Err_NeedPointer
+	}
+
+	var (
+		table      *Table
+		err        error
+		reflectVal reflect.Value
+	)
+	sliceElementType := sliceValue.Type().Elem()
+	if sliceElementType.Kind() == reflect.Ptr {
+		if sliceElementType.Elem().Kind() == reflect.Struct {
+			beanValue := reflect.New(sliceElementType.Elem())
+			reflectVal = reflect.Indirect(beanValue)
+			table, err = e.GetTable(beanValue, reflectVal)
+			if err != nil {
+				return 0, err
+			}
+		}
+	} else if sliceElementType.Kind() == reflect.Struct {
+		beanValue := reflect.New(sliceElementType)
+		reflectVal = reflect.Indirect(beanValue)
+		table, err = e.GetTable(beanValue, reflectVal)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if table == nil {
+		return 0, Err_UnSupportedTableModel
+	}
+	return e.count(searchCon, table)
+}
+func (e *Engine) count(searchCon *SearchCondition, table *Table) (int64, error) {
+	count, err := e.indexCount(table, searchCon)
+	return count, err
+}
 func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry interface{}) (int64, error) {
 	sliceValue := reflect.Indirect(reflect.ValueOf(beanAry))
 	if sliceValue.Kind() != reflect.Slice {
@@ -143,7 +181,7 @@ func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry i
 	if table == nil {
 		return 0, Err_UnSupportedTableModel
 	}
-	count, err := e.indexCount(table, searchCon)
+	count, err := e.count(searchCon, table)
 	if err != nil {
 		return 0, nil
 	}
@@ -214,9 +252,13 @@ func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry i
 		}
 
 		if isPointer {
-			sliceValue.Set(reflect.Append(sliceValue, (&beanValue).Elem().Addr()))
+			if sliceValue.CanSet() {
+				sliceValue.Set(reflect.Append(sliceValue, (&beanValue).Elem().Addr()))
+			}
 		} else {
-			sliceValue.Set(reflect.Append(sliceValue, (&beanValue).Elem()))
+			if sliceValue.CanSet() {
+				sliceValue.Set(reflect.Append(sliceValue, (&beanValue).Elem()))
+			}
 		}
 	}
 	return count, nil
@@ -396,6 +438,33 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 	}
 
 	return len(idAry), nil
+}
+func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
+	if err != nil {
+		return 0, err
+	}
+	if col == "" {
+		return 0, ERR_UnKnowField
+	}
+
+	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
+	if pkFieldValue.Kind() != reflect.Int64 {
+		return 0, Err_PrimaryKeyTypeInvalid
+	}
+
+	pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal, table.PrimaryKey)
+	if err != nil {
+		return 0, err
+	}
+	if pkOldId == 0 {
+		return 0, Err_DataNotAvailable
+	}
+
+	res, err := e.redisClient.HIncrBy(table.GetTableKey(), col, val).Result()
+	return res, err
 }
 func (e *Engine) Update(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)

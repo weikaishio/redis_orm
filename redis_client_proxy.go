@@ -20,6 +20,16 @@ func (c *RedisClientProxy) HMSet(key string, fields map[string]interface{}) *red
 	c.engine.Printfln("hmset %s %v\nval:%v", key, fields, *val)
 	return val
 }
+func (c *RedisClientProxy) HIncrby(key string, field string, intVal int64) *redis.IntCmd {
+	val := c.redisClient.HIncrBy(key, field, intVal)
+	c.engine.Printfln("hincrby %s %v %d\nval:%v", key, field, val, *val)
+	return val
+}
+func (c *RedisClientProxy) HIncrbyFloat(key string, field string, intVal float64) *redis.FloatCmd {
+	val := c.redisClient.HIncrByFloat(key, field, intVal)
+	c.engine.Printfln("hincrbyfloat %s %v %d\nval:%v", key, field, val, *val)
+	return val
+}
 func (c *RedisClientProxy) HMGet(key string, fields ...string) *redis.SliceCmd {
 	if len(fields) == 0 {
 		return &redis.SliceCmd{}
