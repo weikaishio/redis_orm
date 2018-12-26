@@ -66,8 +66,8 @@ func (e *Engine) indexCount(table *Table, searchCon *SearchCondition) (count int
 		var res float64
 		res, err = e.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
 		if err == nil || (err != nil && err.Error() == "redis: nil") {
-			if err == nil {
-				count = int64(res)
+			if err == nil && res > 0 {
+				count = 1
 			}
 		} else {
 			log.Error("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
@@ -160,7 +160,7 @@ func ColsIsExistIndex(index *Index, cols ...string) bool {
 				}
 			}
 		}
-		if meetCount == len(index.IndexColumn) {
+		if meetCount > 0 {
 			isExist = true
 		}
 	}
@@ -271,6 +271,7 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 
 //todo: no thread safety! watch?
 func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, cols ...string) error {
+	e.Printfln("indexUpdate:%s,%v", table.Name, table.IndexesMap)
 	typ := reflectVal.Type()
 	_, has := typ.FieldByName(table.PrimaryKey)
 	if !has {
@@ -284,6 +285,7 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 	for _, index := range indexsMap {
 		if len(cols) > 0 {
 			if !ColsIsExistIndex(index, cols...) {
+				e.Printfln("indexUpdate ColsIsExistIndex:%v,cols:%V", index.IndexColumn, cols)
 				continue
 			}
 		}
@@ -310,6 +312,7 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 			default:
 				SetInt64FromStr(&score, fmt.Sprintf("%v", fieldValueAry[0].Interface()))
 			}
+			e.Printfln("score:%s", ToString(score))
 			if len(fieldValueAry) == 2 {
 				score = score << 32
 				switch fieldValueAry[1].Kind() {
@@ -331,7 +334,7 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 			}
 			redisZ := redis.Z{
 				Member: pkFieldValue.Int(),
-				Score:  float64(score),
+				Score:  float64(score), //todo:浮点数有诡异问题
 			}
 			_, err := e.redisClient.ZAdd(index.NameKey, redisZ).Result()
 			if err != nil {

@@ -308,9 +308,12 @@ func (e *Engine) Insert(bean interface{}) error {
 	}
 	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
 	if err == nil {
-		e.indexUpdate(table, beanValue, reflectVal)
+		err = e.indexUpdate(table, beanValue, reflectVal)
+		if err != nil {
+			e.Printfln("Insert indexUpdate(%s) err:%v", table.Name, err)
+		}
 	}
-	return nil
+	return err
 }
 
 func (e *Engine) GetDefaultValue(bean interface{}) error {
@@ -433,7 +436,10 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 			colValue := reflectVal.FieldByName(table.PrimaryKey)
 			colValue.SetInt(pkInt)
 
-			e.indexUpdate(table, beanValue, reflectVal, cols...)
+			err = e.indexUpdate(table, beanValue, reflectVal, cols...)
+			if err != nil {
+				e.Printfln("UpdateMulti indexUpdate(%s) err:%v", table.Name, err)
+			}
 		}
 	}
 
@@ -463,7 +469,7 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 		return 0, Err_DataNotAvailable
 	}
 
-	res, err := e.redisClient.HIncrBy(table.GetTableKey(), col, val).Result()
+	res, err := e.redisClient.HIncrBy(table.GetTableKey(), GetFieldName(pkOldId, col), val).Result()
 	return res, err
 }
 func (e *Engine) Update(bean interface{}, cols ...string) error {
@@ -550,9 +556,12 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	}
 	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
 	if err == nil {
-		e.indexUpdate(table, beanValue, reflectVal, cols...)
+		err = e.indexUpdate(table, beanValue, reflectVal, cols...)
+		if err != nil {
+			e.Printfln("Update indexUpdate(%s) err:%v", table.Name, err)
+		}
 	}
-	return nil
+	return err
 }
 func (e *Engine) DeleteMulti(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
 	beanValue := reflect.ValueOf(bean)
