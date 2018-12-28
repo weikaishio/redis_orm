@@ -358,7 +358,7 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 				Member: strings.Join(members, "&"),
 				Score:  float64(pkFieldValue.Int()),
 			}
-			_, err = e.redisClient.ZAddNX(index.NameKey, redisZ).Result()
+			_, err = e.redisClient.ZAdd(index.NameKey, redisZ).Result()
 			if err != nil {
 				log.Warn("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
 				return err
