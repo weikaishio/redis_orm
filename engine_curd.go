@@ -22,7 +22,7 @@ func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (b
 		return false, err
 	}
 	if getId == 0 {
-		return false, Err_DataNotAvailable
+		return false, nil
 	}
 	colValue := reflectVal.FieldByName(table.PrimaryKey)
 	colValue.SetInt(getId)
