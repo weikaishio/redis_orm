@@ -4,6 +4,17 @@ import (
 	"reflect"
 )
 
+type ColumnsTb struct {
+	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
+	TableId       int    `redis_orm:"index comment '表ID'"`
+	ColumnName    string `redis_orm:"comment '字段名'"`
+	ColumnComment string `redis_orm:"dft '' index comment '字段注释'"`
+	DataType      string `redis_orm:"comment '数据类型'"`
+	DefaultValue  string `redis_orm:"comment '默认值'"`
+	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
+	UpdatedAt     int64  `redis_orm:"updated_at comment '修改时间'"`
+}
+
 type Column struct {
 	Name            string
 	DefaultValue    string
@@ -16,7 +27,7 @@ type Column struct {
 	EnumOptions     map[string]int
 	SetOptions      map[string]int
 	Comment         string
-	Type            reflect.Type//only support base type
+	Type            reflect.Type //only support base type
 }
 
 func NewEmptyColumn(colName string) *Column {

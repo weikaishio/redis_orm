@@ -25,6 +25,20 @@ import (
 默认值
 
 todo:session for thread safe
+
+todo:DB，兼容已有的Table，暂不用吧
+
+todo:存表、字段、索引结构
+
+todo:改表结构？
+
+todo:逆向生成模型
+
+todo:DB隔离
+
+todo:权限控制
+
+todo:链式查询
 */
 
 type Engine struct {
@@ -183,7 +197,10 @@ func splitTag(tag string) (tags []string) {
 func (e *Engine) tbName(v reflect.Value) string {
 	return strings.ToLower(v.Type().Name())
 }
+func (e *Engine) CreateTable() error{
 
+	return nil
+}
 //keys tb:*
 func (e *Engine) ShowTables() []string {
 	e.tablesMutex.RLock()

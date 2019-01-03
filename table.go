@@ -7,6 +7,35 @@ import (
 	"sync"
 )
 
+/*
+SET @table_schema='employees';
+SELECT
+    table_name,
+    table_type,
+    engine,
+    table_rows,
+    avg_row_length,
+    data_length,
+    index_length,
+    table_collation,
+    create_time
+FROM
+    information_schema.tables
+WHERE
+    table_schema = @table_schema
+ORDER BY table_name;
+*/
+type TablesTb struct {
+	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
+	TableName     string `redis_orm:"unique comment '唯一'"`
+	TableComment  string `redis_orm:"dft '' index comment '表注释'"`
+	PrimaryKey    string `redis_orm:"comment '主键字段'"`
+	AutoIncrement string `redis_orm:"comment '自增字段'"`
+	Created       string `redis_orm:"comment '创建时间字段'"`
+	Updated       string `redis_orm:"comment '更新时间字段'"`
+	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
+	UpdatedAt     int64  `redis_orm:"updated_at comment '修改时间'"`
+}
 type Table struct {
 	Name          string
 	Type          reflect.Type
