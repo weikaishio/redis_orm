@@ -391,6 +391,8 @@ func (e *Engine) IndexReBuild(bean interface{}) error {
 		}
 		if len(idAry) == 0 {
 			break
+		} else {
+			offset += limit
 		}
 
 		fields := make([]string, 0)
