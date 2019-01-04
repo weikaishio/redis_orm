@@ -370,11 +370,87 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 	return nil
 }
 
-func (e *Engine) indexDrop(table *Table) error {
+func (e *Engine) IndexReBuild(bean interface{}) error {
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := e.GetTable(beanValue, reflectVal)
+	if err != nil {
+		return err
+	}
+
+	e.indexDrop(table, table.PrimaryKey)
+
+	var offset int64 = 0
+	var limit int64 = 100
+
+	searchCon := NewSearchCondition(IndexType_IdMember, ScoreMin, ScoreMax, table.PrimaryKey)
+	for {
+		idAry, err := e.indexRange(table, searchCon, offset, limit)
+		if err != nil {
+			return err
+		}
+		if len(idAry) == 0 {
+			break
+		}
+
+		fields := make([]string, 0)
+		for _, id := range idAry {
+			for _, colName := range table.ColumnsSeq {
+				fieldName := GetFieldName(id, colName)
+				fields = append(fields, fieldName)
+			}
+		}
+		valAry, err := e.redisClient.HMGet(table.GetTableKey(), fields...).Result()
+		if err != nil {
+			return err
+		} else if valAry == nil {
+			break
+		}
+		if len(fields) != len(valAry) {
+			return Err_FieldValueInvalid
+		}
+		sliceElementType := reflect.TypeOf(bean).Elem()
+		for i := 0; i < len(fields); i += len(table.ColumnsSeq) {
+			newBeanValue := reflect.New(sliceElementType)
+			reflectElemVal := reflect.Indirect(newBeanValue)
+			for j, colName := range table.ColumnsSeq {
+				if valAry[i+j] == nil && colName == table.PrimaryKey {
+					break
+				}
+				if valAry[i+j] == nil {
+					continue
+				}
+				colValue := reflectElemVal.FieldByName(colName)
+				SetValue(valAry[i+j], &colValue)
+			}
+			err = e.indexUpdate(table, newBeanValue, reflect.Indirect(newBeanValue))
+			if err != nil {
+				e.Printfln("indexReBuild indexUpdate(%v) err:%v", newBeanValue, err)
+			}
+		}
+		if len(idAry) < int(limit) {
+			break
+		}
+	}
+	return nil
+}
+
+func (e *Engine) indexDrop(table *Table, except ...string) error {
 	indexsMap := table.IndexesMap
 	var keys []string
 	for _, index := range indexsMap {
-		keys = append(keys, index.NameKey)
+		isMiss := false
+		if len(except) != 0 {
+			for _, exceptIndex := range except {
+				if exceptIndex == strings.Join(index.IndexColumn, "&") {
+					isMiss = true
+					break
+				}
+			}
+		}
+		if !isMiss {
+			keys = append(keys, index.NameKey)
+		}
 	}
 	if len(keys) > 0 {
 		_, err := e.redisClient.Del(keys...).Result()
