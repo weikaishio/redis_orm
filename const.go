@@ -13,7 +13,7 @@ const (
 	TagUniqueIndex = "unique"
 	/*
 		要支持一种查询条件就得增加一个索引，用&连接联合索引中的字段
-		组合索引 唯一！暂无法解决，除非用int64,前4个字节和后4个字节
+		组合索引 字符串则唯一！集合数据结构决定; 除非用int64,前4个字节和后4个字节，放Score
 		1、id作为score, 可以组合但是member唯一，唯一查询可用
 		此情况下的组合索引，直接按顺序拼接即可
 
@@ -60,6 +60,7 @@ var (
 	Err_DataHadAvailable           = errors.New("redis-orm-error:data had exist")
 	Err_CombinedIndexColCountOver  = errors.New("redis-orm-error:combined index not support more than 2 column")
 	Err_CombinedIndexTypeError     = errors.New("redis-orm-error:combined index not support this type of column")
-	Err_NeedPointer                = errors.New("needs a pointer to a value")
-	Err_NotSupportPointer2Pointer  = errors.New("pointer to pointer is not supported")
+	Err_NeedPointer                = errors.New("redis-orm-error:needs a pointer to a value")
+	Err_NeedSlice                  = errors.New("redis-orm-error:value needs to be a slice")
+	Err_NotSupportPointer2Pointer  = errors.New("redis-orm-error:pointer to pointer is not supported")
 )

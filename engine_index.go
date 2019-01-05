@@ -9,11 +9,11 @@ import (
 	"strings"
 )
 
-//todo:combined index
+//Done:combined index
 func (e *Engine) indexGetId(table *Table, searchCon *SearchCondition) (int64, error) {
 	index, ok := table.IndexesMap[strings.ToLower(searchCon.Name())]
 	if !ok {
-		err := fmt.Errorf("searchCon:%s not exist\n", strings.ToLower(searchCon.Name()))
+		err := fmt.Errorf("searchCon.index:%s not exist\n", strings.ToLower(searchCon.Name()))
 		return 0, err
 	}
 	switch index.Type {
@@ -52,7 +52,7 @@ func (e *Engine) indexGetId(table *Table, searchCon *SearchCondition) (int64, er
 func (e *Engine) indexCount(table *Table, searchCon *SearchCondition) (count int64, err error) {
 	index, ok := table.IndexesMap[strings.ToLower(searchCon.Name())]
 	if !ok {
-		err = fmt.Errorf("searchCon:%s not exist\n", strings.ToLower(searchCon.Name()))
+		err = fmt.Errorf("searchCon.index:%s not exist\n", strings.ToLower(searchCon.Name()))
 		return
 	}
 	switch index.Type {
@@ -81,7 +81,7 @@ func (e *Engine) indexCount(table *Table, searchCon *SearchCondition) (count int
 func (e *Engine) indexRange(table *Table, searchCon *SearchCondition, offset, count int64) (idAry []string, err error) {
 	index, ok := table.IndexesMap[strings.ToLower(searchCon.Name())]
 	if !ok {
-		err = fmt.Errorf("searchCon:%s not exist\n", strings.ToLower(searchCon.Name()))
+		err = fmt.Errorf("searchCon.index:%s not exist\n", strings.ToLower(searchCon.Name()))
 		return
 	}
 	switch index.Type {

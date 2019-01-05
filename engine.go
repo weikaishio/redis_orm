@@ -26,19 +26,10 @@ import (
 
 todo:session for thread safe
 
-todo:DB，兼容已有的Table，暂不用吧
-
-todo:存表、字段、索引结构
-
-todo:改表结构？
-
-todo:逆向生成模型
-
-todo:DB隔离
-
-todo:权限控制
-
 todo:链式查询
+
+todo:权限控制~
+
 */
 
 type Engine struct {
@@ -86,7 +77,8 @@ func (e *Engine) GetTable(beanValue, beanIndirectValue reflect.Value) (*Table, e
 		return nil, Err_NotSupportPointer2Pointer
 	}
 
-	if beanValue.Elem().Kind() == reflect.Struct {
+	if beanValue.Elem().Kind() == reflect.Struct ||
+		beanValue.Elem().Kind() == reflect.Interface {
 		e.tablesMutex.RLock()
 		table, ok := e.Tables[beanValue.Type()]
 		e.tablesMutex.RUnlock()
@@ -125,19 +117,28 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 		if rdsTagStr != "" {
 			col = NewEmptyColumn(typ.Field(i).Name)
 			tags := splitTag(rdsTagStr)
+			var (
+				isIndex   bool
+				isUnique  bool
+				indexName string
+			)
 			for j, key := range tags {
 				keyLower := strings.ToLower(key)
 				if keyLower == TagIndex {
-					table.AddIndex(fieldType, col.Name, col.Name, false)
+					isIndex = true
+					indexName = col.Name
 				} else if keyLower == TagUniqueIndex {
-					table.AddIndex(fieldType, col.Name, col.Name, true)
+					isIndex = true
+					indexName = col.Name
+					isUnique = true
 				} else if keyLower == TagDefaultValue {
 					if len(tags) > j {
 						col.DefaultValue = strings.Trim(tags[j+1], "'")
 					}
 				} else if keyLower == TagPrimaryKey {
 					col.IsPrimaryKey = true
-					table.AddIndex(fieldType, col.Name, col.Name, false)
+					isIndex = true
+					indexName = col.Name
 				} else if keyLower == TagAutoIncrement {
 					if table.AutoIncrement != "" {
 						return nil, Err_MoreThanOneIncrementColumn
@@ -156,16 +157,21 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 					if fieldType.Kind() != reflect.String && fieldType.Kind() != reflect.Int64 {
 						return nil, Err_CombinedIndexTypeError
 					}
-					if len(tags) > j {
-						table.AddIndex(fieldType, tags[j+1], col.Name, false)
+					if len(tags) > j && tags[j+1] != "" {
+						isIndex = true
+						indexName = tags[j+1]
+						col.IsCombinedIndex = true
 					}
-					col.IsCombinedIndex = true
 					continue
 				} else {
 					//abondon
 				}
 			}
+			col.Type=fieldType
 			table.AddColumn(col)
+			if isIndex {
+				table.AddIndex(fieldType, indexName, col.Name, col.Comment, isUnique)
+			}
 		} else {
 			log.Warn("MapTable field:%s, not has tag", typ.Field(i).Name)
 		}
@@ -196,20 +202,6 @@ func splitTag(tag string) (tags []string) {
 }
 func (e *Engine) tbName(v reflect.Value) string {
 	return strings.ToLower(v.Type().Name())
-}
-func (e *Engine) CreateTable() error{
-
-	return nil
-}
-//keys tb:*
-func (e *Engine) ShowTables() []string {
-	e.tablesMutex.RLock()
-	defer e.tablesMutex.RUnlock()
-	tableAry := make([]string, 0)
-	for _, v := range e.Tables {
-		tableAry = append(tableAry, v.Name)
-	}
-	return tableAry
 }
 
 func SetDefaultValue(col *Column, value *reflect.Value) {

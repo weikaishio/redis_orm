@@ -10,9 +10,9 @@ const (
 	IndexType_IdScore   IndexType = 2
 )
 
-type IndexsTb struct {
+type SchemaIndexsTb struct {
 	Id           int64  `redis_orm:"pk autoincr comment 'ID'"`
-	TableId      int    `redis_orm:"index comment '表ID'"`
+	TableId      int64    `redis_orm:"index comment '表ID'"`
 	IndexName    string `redis_orm:"comment '索引名'"`
 	IndexComment string `redis_orm:"dft '' index comment '索引注释'"`
 	IndexColumn  string `redis_orm:"comment '索引字段，&分割'"`
@@ -21,17 +21,28 @@ type IndexsTb struct {
 	CreatedAt    int64  `redis_orm:"created_at comment '创建时间'"`
 	UpdatedAt    int64  `redis_orm:"updated_at comment '修改时间'"`
 }
+func SchemaIndexsFromColumn(tableId int64, v *Index) *SchemaIndexsTb {
+	return &SchemaIndexsTb{
+		TableId:       tableId,
+		IndexName:    v.NameKey,
+		IndexComment: v.Comment,
+		IndexColumn:  strings.Join(v.IndexColumn, "&"),
+		IsUnique:     v.IsUnique,
+		IndexType:    int(v.Type),
+	}
+}
 
 type Index struct {
 	NameKey     string
 	IndexColumn []string
+	Comment         string
 	Type        IndexType
 	IsUnique    bool
 }
 
 type SearchCondition struct {
 	SearchColumn  []string
-	IndexType     IndexType
+	//IndexType     IndexType
 	FieldMaxValue interface{}
 	FieldMinValue interface{}
 	IsAsc         bool
@@ -40,7 +51,14 @@ type SearchCondition struct {
 func NewSearchCondition(indexType IndexType, minVal, maxVal interface{}, column ...string) *SearchCondition {
 	return &SearchCondition{
 		SearchColumn:  column,
-		IndexType:     indexType,
+		FieldMaxValue: maxVal,
+		FieldMinValue: minVal,
+	}
+}
+
+func NewSearchConditionV2( minVal, maxVal interface{}, column ...string) *SearchCondition {
+	return &SearchCondition{
+		SearchColumn:  column,
 		FieldMaxValue: maxVal,
 		FieldMinValue: minVal,
 	}

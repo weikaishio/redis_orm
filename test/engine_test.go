@@ -51,25 +51,44 @@ func init() {
 //}
 
 func TestEngine_Insert(t *testing.T) {
+	ary := make([]interface{}, 0)
 	faq := &models.Faq{
-		Title:  "index2" ,
+		Title:  "index6",
 		Unique: time.Now().Unix(),
-		Hearts:100,
+		Hearts: 104,
 	}
-	engine.TableDrop(faq)
-	err := engine.Insert(faq)
+	ary = append(ary, faq)
+	faq = &models.Faq{
+		Title:  "index7",
+		Unique: time.Now().Unix(),
+		Hearts: 105,
+	}
+	ary = append(ary, faq)
+	//engine.TableDrop(faq)
+	affected, err := engine.InsertMulti(ary...)
 	bys, _ := json.Marshal(faq)
-	t.Logf("Insert faq:%v,err:%v", string(bys), err)
+	t.Logf("Insert faq:%v,affected:%d,err:%v", string(bys), affected, err)
 }
 
-func TestEngine_Get(t *testing.T) {
-	faq := &models.Faq{
-		Id: 2,
+func TestEngine_CreateTable(t *testing.T) {
+	faq := &models.Faq{}
+	err := engine.CreateTable(faq)
+	t.Logf("CreateTable(%v),err:%v", faq, err)
+
+	tables, err := engine.ReloadTables()
+	for _, table := range tables {
+		t.Logf("ReloadTables:%v,err:%v", *table, err)
 	}
-	has, err := engine.Get(faq)
-	bys, _ := json.Marshal(faq)
-	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
 }
+
+//func TestEngine_Get(t *testing.T) {
+//	faq := &models.Faq{
+//		Id: 2,
+//	}
+//	has, err := engine.Get(faq)
+//	bys, _ := json.Marshal(faq)
+//	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
+//}
 
 //func TestEngine_GetByCombinedIndex(t *testing.T) {
 //	faq := &models.Faq{}
@@ -86,16 +105,17 @@ func TestEngine_Get(t *testing.T) {
 //}
 
 func TestEngine_Find(t *testing.T) {
-	engine.IndexReBuild(models.Faq{})
-	var faqAry []*models.Faq
-	count, err := engine.Find(0, 30, redis_orm.NewSearchCondition(
-		redis_orm.IndexType_IdMember,
-		redis_orm.ScoreMin,
-		redis_orm.ScoreMax,
-		"Type",
-	), &faqAry)
-	bys, _ := json.Marshal(faqAry)
-	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
+	//engine.IndexReBuild(models.Faq{})
+	//var faqAry []*models.Faq
+	//count, err := engine.Find(0, 30, redis_orm.NewSearchCondition(
+	//	redis_orm.IndexType_IdMember,
+	//	redis_orm.ScoreMin,
+	//	redis_orm.ScoreMax,
+	//	"Type",
+	//), &faqAry)
+	//bys, _ := json.Marshal(faqAry)
+	//t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
+
 }
 
 //func TestEngine_Update(t *testing.T) {

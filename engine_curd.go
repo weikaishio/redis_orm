@@ -71,8 +71,8 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 	pkInt := pkFieldValue.Int()
 
 	getId, err := e.indexGetId(table, &SearchCondition{
-		SearchColumn:  []string{table.PrimaryKey},
-		IndexType:     IndexType_IdMember,
+		SearchColumn: []string{table.PrimaryKey},
+		//IndexType:     IndexType_IdMember,
 		FieldMinValue: pkInt,
 		FieldMaxValue: pkInt,
 	})
@@ -152,7 +152,7 @@ func (e *Engine) count(searchCon *SearchCondition, table *Table) (int64, error) 
 func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry interface{}) (int64, error) {
 	sliceValue := reflect.Indirect(reflect.ValueOf(beanAry))
 	if sliceValue.Kind() != reflect.Slice {
-		return 0, Err_NeedPointer
+		return 0, Err_NeedSlice
 	}
 
 	var (
@@ -170,7 +170,7 @@ func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry i
 				return 0, err
 			}
 		}
-	} else if sliceElementType.Kind() == reflect.Struct {
+	} else if sliceElementType.Kind() == reflect.Struct || sliceElementType.Kind() == reflect.Interface {
 		beanValue := reflect.New(sliceElementType)
 		reflectVal = reflect.Indirect(beanValue)
 		table, err = e.GetTable(beanValue, reflectVal)
@@ -264,6 +264,72 @@ func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry i
 	return count, nil
 }
 
+func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
+	var (
+		table *Table
+		err   error
+	)
+
+	valMap := make(map[string]interface{})
+
+	affectedRows := 0
+	for _, bean := range beans {
+		beanValue := reflect.ValueOf(bean)
+		reflectVal := reflect.Indirect(beanValue)
+		if table==nil {
+			table, err = e.GetTable(reflect.ValueOf(bean), reflect.Indirect(beanValue))
+			if err != nil {
+				e.Printfln("GetTable(%v,%v),err:%v", beanValue, reflectVal, err)
+				continue
+			}
+		}
+		pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal)
+		if err != nil {
+			continue
+		}
+		if pkOldId > 0 {
+			continue
+		}
+		var lastId int64
+		if table.AutoIncrement != "" {
+			lastId, err = e.redisClient.HIncrBy(table.GetTableKey(), table.GetAutoIncrKey(), 1).Result()
+			if err != nil {
+				continue
+			}
+		}
+		for colName, col := range table.ColumnsMap {
+			fieldName := GetFieldName(lastId, colName)
+			colValue := reflectVal.FieldByName(colName)
+			if col.IsAutoIncrement {
+				valMap[fieldName] = ToString(lastId)
+				colValue.SetInt(lastId)
+			} else if col.IsCombinedIndex {
+
+			} else if col.IsCreated || col.IsUpdated {
+				createdAt := time.Now().In(e.TZLocation).Unix()
+				valMap[fieldName] = createdAt
+				colValue.SetInt(createdAt)
+			} else {
+				SetDefaultValue(col, &colValue)
+				valMap[fieldName] = ToString(colValue.Interface())
+			}
+		}
+		affectedRows++
+	}
+	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
+	if err == nil {
+		for _, bean := range beans {
+			beanValue := reflect.ValueOf(bean)
+			reflectVal := reflect.Indirect(beanValue)
+			err = e.indexUpdate(table, beanValue, reflectVal)
+			if err != nil {
+				e.Printfln("InsertMulti indexUpdate(%s,%v) err:%v", table.Name, bean, err)
+			}
+		}
+	}
+	return affectedRows, err
+}
+
 //Done:unique index is exist? -> indexIsExistData
 func (e *Engine) Insert(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
@@ -310,7 +376,7 @@ func (e *Engine) Insert(bean interface{}) error {
 	if err == nil {
 		err = e.indexUpdate(table, beanValue, reflectVal)
 		if err != nil {
-			e.Printfln("Insert indexUpdate(%s) err:%v", table.Name, err)
+			e.Printfln("Insert indexUpdate(%s,%v) err:%v", table.Name, bean, err)
 		}
 	}
 	return err
@@ -563,7 +629,7 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	}
 	return err
 }
-func (e *Engine) DeleteMulti(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
+func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 	table, err := e.GetTable(beanValue, reflectVal)
@@ -619,8 +685,8 @@ func (e *Engine) Delete(bean interface{}) error {
 	pkInt := pkFieldValue.Int()
 
 	getId, err := e.indexGetId(table, &SearchCondition{
-		SearchColumn:  []string{table.PrimaryKey},
-		IndexType:     IndexType_IdMember,
+		SearchColumn: []string{table.PrimaryKey},
+		//IndexType:     IndexType_IdMember,
 		FieldMinValue: pkInt,
 		FieldMaxValue: pkInt,
 	})
@@ -645,7 +711,7 @@ func (e *Engine) Delete(bean interface{}) error {
 }
 
 //del the hashkey, it will del all elements for this hash
-func (e *Engine) TableDrop(bean interface{}) error {
+func (e *Engine) TableTruncate(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 	table, err := e.GetTable(beanValue, reflectVal)
@@ -658,9 +724,4 @@ func (e *Engine) TableDrop(bean interface{}) error {
 	}
 	err = e.indexDrop(table)
 	return err
-}
-
-//del the hashkey, it will del all elements for this hash
-func (e *Engine) TableTruncate(bean interface{}) error {
-	return e.TableDrop(bean)
 }

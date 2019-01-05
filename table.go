@@ -25,10 +25,10 @@ WHERE
     table_schema = @table_schema
 ORDER BY table_name;
 */
-type TablesTb struct {
+type SchemaTablesTb struct {
 	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
 	TableName     string `redis_orm:"unique comment '唯一'"`
-	TableComment  string `redis_orm:"dft '' index comment '表注释'"`
+	TableComment  string `redis_orm:"dft '' index comment '表注释'"` //暂时没用上
 	PrimaryKey    string `redis_orm:"comment '主键字段'"`
 	AutoIncrement string `redis_orm:"comment '自增字段'"`
 	Created       string `redis_orm:"comment '创建时间字段'"`
@@ -36,6 +36,18 @@ type TablesTb struct {
 	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
 	UpdatedAt     int64  `redis_orm:"updated_at comment '修改时间'"`
 }
+
+func SchemaTablesFromTable(table *Table) *SchemaTablesTb {
+	return &SchemaTablesTb{
+		TableName:     table.Name,
+		TableComment:  table.Name,
+		PrimaryKey:    table.PrimaryKey,
+		AutoIncrement: table.AutoIncrement,
+		Created:       table.Created,
+		Updated:       table.Updated,
+	}
+}
+
 type Table struct {
 	Name          string
 	Type          reflect.Type
@@ -66,7 +78,7 @@ func (table *Table) GetAutoIncrKey() string {
 func (table *Table) GetTableKey() string {
 	return fmt.Sprintf("%s%s", KeyTbPrefix, strings.ToLower(table.Name))
 }
-func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName string, isUnique bool) {
+func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName, comment string, isUnique bool) {
 	var indexType IndexType
 	switch typ.Kind() {
 	case reflect.String:
@@ -93,6 +105,7 @@ func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName string, i
 	index := &Index{
 		NameKey:     table.GetIndexKey(columnName),
 		IndexColumn: strings.Split(indexColumn, "&"),
+		Comment:     comment,
 		Type:        indexType,
 		IsUnique:    isUnique,
 	}
