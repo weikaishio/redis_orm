@@ -3,6 +3,7 @@ package redis_orm
 import (
 	"math"
 	"reflect"
+	"strings"
 )
 
 /*
@@ -11,7 +12,7 @@ todo:DB隔离, DB如何兼容已有的Table，暂不用吧，redis有自己的DB
 
 todo:存表、字段、索引结构 ok 待测试
 
-todo:改表结构？需要存一个版本号~ 修改了表结构需要reload table, schemaTable -> mapTable
+todo:改表结构？需要存一个版本号~ pub/sub, 修改了表结构需要reload table, schemaTable -> mapTable
 
 todo:逆向生成模型
 */
@@ -106,4 +107,43 @@ func (e *Engine) ReloadTables() ([]*SchemaTablesTb, error) {
 		return nil, ERR_UnKnowError
 	}
 	return tablesAry, nil
+}
+func (e *Engine) SchemaTables2MapTables() ([]*Table, error) {
+	tables := make([]*Table, 0)
+	var tablesAry []*SchemaTablesTb
+	count, err := e.Find(0, int64(math.MaxInt64), NewSearchConditionV2(ScoreMin, ScoreMax, "Id"), &tablesAry)
+	if err != nil {
+		return tables, err
+	}
+	if count != int64(len(tablesAry)) {
+		e.Printfln("ReloadTables count:%d !=len(tablesAry):%d", count, len(tablesAry))
+		return tables, ERR_UnKnowError
+	}
+
+	for _, schemaTable := range tablesAry {
+		table := TableFromSchemaTables(schemaTable)
+
+		var columnsAry []*SchemaColumnsTb
+		_, err := e.Find(0, int64(math.MaxInt64), NewSearchConditionV2(schemaTable.Id, schemaTable.Id, "TableId"), &columnsAry)
+		if err != nil {
+			e.Printfln("SchemaTables2MapTables(%v) find SchemaColumnsTb,err:%v", schemaTable, err)
+			continue
+		}
+		for _, schemaColumn := range columnsAry {
+			table.ColumnsSeq = append(table.ColumnsSeq, schemaColumn.ColumnName)
+			table.ColumnsMap[schemaColumn.ColumnName] = ColumnFromSchemaColumns(schemaColumn, schemaTable)
+		}
+
+		var indexsAry []*SchemaIndexsTb
+		_, err = e.Find(0, int64(math.MaxInt64), NewSearchConditionV2(schemaTable.Id, schemaTable.Id, "TableId"), &indexsAry)
+		if err != nil {
+			e.Printfln("SchemaTables2MapTables(%v) find SchemaIndexsTb,err:%v", schemaTable, err)
+			continue
+		}
+		for _, schemaIndex := range indexsAry {
+			table.IndexesMap[strings.ToLower(schemaIndex.IndexColumn)] = IndexFromSchemaIndexs(schemaIndex)
+		}
+		tables = append(tables, table)
+	}
+	return tables, nil
 }

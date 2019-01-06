@@ -61,6 +61,18 @@ type Table struct {
 	mutex         sync.RWMutex
 }
 
+func TableFromSchemaTables(table *SchemaTablesTb) *Table {
+	return &Table{
+		Name:          table.TableName,
+		PrimaryKey:    table.PrimaryKey,
+		AutoIncrement: table.AutoIncrement,
+		ColumnsMap:    make(map[string]*Column),
+		IndexesMap:    make(map[string]*Index),
+		Created:       table.Created,
+		Updated:       table.Updated,
+	}
+}
+
 func NewEmptyTable() *Table {
 	return &Table{Name: "", Type: nil,
 		ColumnsSeq: make([]string, 0),

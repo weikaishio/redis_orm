@@ -10,6 +10,7 @@ const (
 	//定义是否索引，索引名自动生成 e.g.fmt.Sprintf("%s%s_%s", KeyIndexPrefix, strings.ToLower(table.Name), strings.ToLower(columnName)),
 	TagIndex = "index"
 	//唯一索引 针对IndexType_IdMember有效，IndexType_IdScore的索引本来就是唯一的~
+	//todo:唯一索引走hash更快
 	TagUniqueIndex = "unique"
 	/*
 		要支持一种查询条件就得增加一个索引，用&连接联合索引中的字段

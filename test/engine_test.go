@@ -70,14 +70,24 @@ func TestEngine_Insert(t *testing.T) {
 	t.Logf("Insert faq:%v,affected:%d,err:%v", string(bys), affected, err)
 }
 
-func TestEngine_CreateTable(t *testing.T) {
-	faq := &models.Faq{}
-	err := engine.CreateTable(faq)
-	t.Logf("CreateTable(%v),err:%v", faq, err)
-
-	tables, err := engine.ReloadTables()
-	for _, table := range tables {
-		t.Logf("ReloadTables:%v,err:%v", *table, err)
+//func TestEngine_CreateTable(t *testing.T) {
+//	faq := &models.Faq{}
+//	err := engine.CreateTable(faq)
+//	t.Logf("CreateTable(%v),err:%v", faq, err)
+//
+//	tables, err := engine.ReloadTables()
+//	for _, table := range tables {
+//		t.Logf("ReloadTables:%v,err:%v", *table, err)
+//	}
+//}
+func TestEngine_SchemaTables2MapTables(t *testing.T) {
+	tables, err := engine.SchemaTables2MapTables()
+	if err == nil {
+		for _, table := range tables {
+			t.Logf("table:%v", *table)
+		}
+	} else {
+		t.Logf("SchemaTables2MapTables err:%v", err)
 	}
 }
 

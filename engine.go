@@ -167,7 +167,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 					//abondon
 				}
 			}
-			col.Type=fieldType
+			col.Type = fieldType
 			table.AddColumn(col)
 			if isIndex {
 				table.AddIndex(fieldType, indexName, col.Name, col.Comment, isUnique)
@@ -233,6 +233,8 @@ func SetDefaultValue(col *Column, value *reflect.Value) {
 		}
 	case reflect.Map:
 		//todo:SetValue4Map
+	case reflect.Bool:
+		value.SetBool(false)
 	default:
 	}
 }
@@ -259,6 +261,10 @@ func SetValue(val interface{}, value *reflect.Value) {
 		//todo:SetValue4Map
 		//reflect.TypeOf()
 		//value.Set(reflect.MapOf())
+	case reflect.Bool:
+		var valBool bool
+		SetBoolFromStr(&valBool, ToString(val))
+		value.SetBool(valBool)
 	default:
 		value.Set(reflect.ValueOf(val))
 	}

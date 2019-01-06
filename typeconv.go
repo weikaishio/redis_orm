@@ -35,6 +35,12 @@ func ToString(v interface{}) string {
 		return value
 	case []byte:
 		return string(value)
+	case bool:
+		if value {
+			return "true"
+		} else {
+			return "false"
+		}
 	default:
 		data, err := json.Marshal(v)
 		if err != nil {
