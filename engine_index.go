@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"github.com/go-redis/redis"
-	"github.com/mkideal/log"
 	"strings"
 )
 
@@ -33,7 +32,7 @@ func (e *Engine) indexGetId(table *Table, searchCon *SearchCondition) (int64, er
 			SetInt64FromStr(&id, res[0])
 			return id, nil
 		} else {
-			log.Error("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
+			e.Printfln("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
 			return 0, err
 		}
 	case IndexType_IdScore:
@@ -41,11 +40,11 @@ func (e *Engine) indexGetId(table *Table, searchCon *SearchCondition) (int64, er
 		if err == nil || (err != nil && err.Error() == "redis: nil") {
 			return int64(res), nil
 		} else {
-			log.Error("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
+			e.Printfln("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
 			return 0, err
 		}
 	case IndexType_UnSupport:
-		log.Error("indexGetId unsupport index type")
+		e.Printfln("indexGetId unsupport index type")
 	}
 	return 0, nil
 }
@@ -59,7 +58,7 @@ func (e *Engine) indexCount(table *Table, searchCon *SearchCondition) (count int
 	case IndexType_IdMember:
 		count, err = e.redisClient.ZCount(index.NameKey, ToString(searchCon.FieldMinValue), ToString(searchCon.FieldMaxValue)).Result()
 		if err != nil {
-			log.Error("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
+			e.Printfln("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
 		}
 		return
 	case IndexType_IdScore:
@@ -70,11 +69,11 @@ func (e *Engine) indexCount(table *Table, searchCon *SearchCondition) (count int
 				count = 1
 			}
 		} else {
-			log.Error("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
+			e.Printfln("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
 		}
 		return
 	case IndexType_UnSupport:
-		log.Error("indexGetId unsupport index type")
+		e.Printfln("indexGetId unsupport index type")
 	}
 	return
 }
@@ -98,7 +97,7 @@ func (e *Engine) indexRange(table *Table, searchCon *SearchCondition, offset, co
 			idAry, err = e.redisClient.ZRevRangeByScore(index.NameKey, redisZ).Result()
 		}
 		if err != nil {
-			log.Error("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
+			e.Printfln("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
 		}
 
 		return idAry, nil
@@ -108,11 +107,11 @@ func (e *Engine) indexRange(table *Table, searchCon *SearchCondition, offset, co
 		if err == nil || (err != nil && err.Error() == "redis: nil") {
 			idAry = append(idAry, ToString(res))
 		} else {
-			log.Error("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
+			e.Printfln("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
 		}
 		return idAry, nil
 	case IndexType_UnSupport:
-		log.Error("indexGetId unsupport index type")
+		e.Printfln("indexGetId unsupport index type")
 	}
 	return idAry, nil
 }
@@ -126,17 +125,17 @@ func (e *Engine) indexDelete(table *Table, idInt int64) error {
 		case IndexType_IdMember:
 			_, err := e.redisClient.ZRem(index.NameKey, idInt).Result()
 			if err != nil {
-				log.Warn("indexDelete %s:%v,err:%v", index.NameKey, idInt, err)
+				e.Printfln("indexDelete %s:%v,err:%v", index.NameKey, idInt, err)
 				return err
 			}
 		case IndexType_IdScore:
 			_, err := e.redisClient.ZRemRangeByScores(index.NameKey, ToString(idInt), ToString(idInt)).Result()
 			if err != nil {
-				log.Warn("indexDelete ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(idInt), err)
+				e.Printfln("indexDelete ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(idInt), err)
 				return err
 			}
 		case IndexType_UnSupport:
-			log.Error("indexDelete unsupport index type")
+			e.Printfln("indexDelete unsupport index type")
 		}
 	}
 	return nil
@@ -236,7 +235,7 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 			}
 			val, err := e.redisClient.ZRangeByScore(index.NameKey, zRangeBy).Result()
 			if err != nil {
-				log.Warn("indexIsExistData ZRangeByScore%s:%v,err:%v", index.NameKey, score, err)
+				e.Printfln("indexIsExistData ZRangeByScore%s:%v,err:%v", index.NameKey, score, err)
 				return 0, err
 			} else if len(val) > 0 {
 				var pkOldId int64
@@ -255,15 +254,16 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 			//log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
 			pkOldId, err := e.redisClient.ZScore(index.NameKey, strings.Join(members, "&")).Result()
 			if err != nil && err.Error() != "redis: nil" {
-				log.Warn("indexIsExistData %s:%v,err:%v", index.NameKey, strings.Join(members, "&"), err)
+				e.Printfln("indexIsExistData %s:%v,err:%v", index.NameKey, strings.Join(members, "&"), err)
 				return 0, err
 			} else {
+				e.Printfln("ZScore(%s,%s) pkOldId:%d", index.NameKey, strings.Join(members, "&"), int64(pkOldId))
 				if int64(pkOldId) > 0 {
 					return int64(pkOldId), nil
 				}
 			}
 		case IndexType_UnSupport:
-			log.Error("indexIsExistData unsupport index type")
+			e.Printfln("indexIsExistData unsupport index type")
 		}
 	}
 	return 0, nil
@@ -285,7 +285,7 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 	for _, index := range indexsMap {
 		if len(cols) > 0 {
 			if !ColsIsExistIndex(index, cols...) {
-				e.Printfln("indexUpdate ColsIsExistIndex:%v,cols:%V", index.IndexColumn, cols)
+				e.Printfln("indexUpdate ColsIsExistIndex:%v,cols:%v", index.IndexColumn, cols)
 				continue
 			}
 		}
@@ -312,7 +312,6 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 			default:
 				SetInt64FromStr(&score, fmt.Sprintf("%v", fieldValueAry[0].Interface()))
 			}
-			e.Printfln("score:%s", ToString(score))
 			if len(fieldValueAry) == 2 {
 				score = score << 32
 				switch fieldValueAry[1].Kind() {
@@ -338,14 +337,14 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 			}
 			_, err := e.redisClient.ZAdd(index.NameKey, redisZ).Result()
 			if err != nil {
-				log.Warn("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
+				e.Printfln("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
 				return err
 			}
 		case IndexType_IdScore:
 			//remove old index
 			_, err := e.redisClient.ZRemRangeByScores(index.NameKey, ToString(pkFieldValue.Int()), ToString(pkFieldValue.Int())).Result()
 			if err != nil {
-				log.Warn("IndexUpdate ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(pkFieldValue.Int()), err)
+				e.Printfln("IndexUpdate ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(pkFieldValue.Int()), err)
 				return err
 			}
 			var members []string
@@ -360,11 +359,11 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 			}
 			_, err = e.redisClient.ZAdd(index.NameKey, redisZ).Result()
 			if err != nil {
-				log.Warn("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
+				e.Printfln("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
 				return err
 			}
 		case IndexType_UnSupport:
-			log.Error("IndexUpdate unsupport index type")
+			e.Printfln("IndexUpdate unsupport index type")
 		}
 	}
 	return nil

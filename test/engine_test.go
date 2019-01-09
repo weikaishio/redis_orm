@@ -1,15 +1,13 @@
 package test
 
 import (
-	"testing"
-	"time"
-
 	"encoding/json"
 	"github.com/go-redis/redis"
 	"github.com/mkideal/log"
-
 	"github.com/weikaishio/redis_orm"
 	"github.com/weikaishio/redis_orm/test/models"
+	"testing"
+	"time"
 )
 
 var (
@@ -28,6 +26,7 @@ func init() {
 
 	engine = redis_orm.NewEngine(redisClient)
 	engine.IsShowLog(true)
+	engine.ReloadTables()
 
 	log.SetLevelFromString("TRACE")
 }
@@ -51,45 +50,59 @@ func init() {
 //}
 
 func TestEngine_Insert(t *testing.T) {
+	//engine.TableDrop(&redis_orm.SchemaTablesTb{})
+	//engine.TableDrop(&redis_orm.SchemaColumnsTb{})
+	//engine.TableDrop(&redis_orm.SchemaIndexsTb{})
+	//t.Logf("tables:%v", engine.Tables)
+	//engine.TableTruncate(&models.Faq{})
+	//for _, table := range engine.Tables {
+	//	if strings.Contains(redis_orm.NeedMapTable, table.Name) {
+	//		continue
+	//	}
+	//	t.Logf("table:%v", *table)
+	//	for key, column := range table.ColumnsMap {
+	//		t.Logf("column:%s,%v", key, column)
+	//	}
+	//	for key, index := range table.IndexesMap {
+	//		t.Logf("index:%s,%v", key, index)
+	//	}
+	//}
 	ary := make([]interface{}, 0)
 	faq := &models.Faq{
-		Title:  "index6",
-		Unique: time.Now().Unix(),
-		Hearts: 104,
+		Title:  "index3",
+		Unique: 1547020513,
+		Hearts: 1,
 	}
 	ary = append(ary, faq)
 	faq = &models.Faq{
-		Title:  "index7",
+		Title:  "index8",
 		Unique: time.Now().Unix(),
-		Hearts: 105,
+		Hearts: 2,
 	}
 	ary = append(ary, faq)
-	//engine.TableDrop(faq)
 	affected, err := engine.InsertMulti(ary...)
 	bys, _ := json.Marshal(faq)
-	t.Logf("Insert faq:%v,affected:%d,err:%v", string(bys), affected, err)
+	t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
 }
 
+//
 //func TestEngine_CreateTable(t *testing.T) {
 //	faq := &models.Faq{}
+//	//engine.TableDrop(faq)
 //	err := engine.CreateTable(faq)
 //	t.Logf("CreateTable(%v),err:%v", faq, err)
-//
+//}
+
+//func TestEngine_ReloadTables(t *testing.T) {
 //	tables, err := engine.ReloadTables()
-//	for _, table := range tables {
-//		t.Logf("ReloadTables:%v,err:%v", *table, err)
+//	if err == nil {
+//		for _, table := range tables {
+//			t.Logf("table:%v", *table)
+//		}
+//	} else {
+//		t.Logf("SchemaTables2MapTables err:%v", err)
 //	}
 //}
-func TestEngine_SchemaTables2MapTables(t *testing.T) {
-	tables, err := engine.SchemaTables2MapTables()
-	if err == nil {
-		for _, table := range tables {
-			t.Logf("table:%v", *table)
-		}
-	} else {
-		t.Logf("SchemaTables2MapTables err:%v", err)
-	}
-}
 
 //func TestEngine_Get(t *testing.T) {
 //	faq := &models.Faq{
@@ -116,15 +129,15 @@ func TestEngine_SchemaTables2MapTables(t *testing.T) {
 
 func TestEngine_Find(t *testing.T) {
 	//engine.IndexReBuild(models.Faq{})
-	//var faqAry []*models.Faq
-	//count, err := engine.Find(0, 30, redis_orm.NewSearchCondition(
-	//	redis_orm.IndexType_IdMember,
-	//	redis_orm.ScoreMin,
-	//	redis_orm.ScoreMax,
-	//	"Type",
-	//), &faqAry)
-	//bys, _ := json.Marshal(faqAry)
-	//t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
+	var faqAry []*models.Faq
+	count, err := engine.Find(0, 30, redis_orm.NewSearchConditionV2(
+		"1&index8",
+		"index3",
+		"Type",
+		"Title",
+	), &faqAry)
+	bys, _ := json.Marshal(faqAry)
+	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
 
 }
 

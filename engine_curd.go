@@ -272,19 +272,40 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 
 	valMap := make(map[string]interface{})
 
-	affectedRows := 0
+	var affectBeans []interface{}
 	for _, bean := range beans {
 		beanValue := reflect.ValueOf(bean)
 		reflectVal := reflect.Indirect(beanValue)
-		if table==nil {
+		if table == nil {
 			table, err = e.GetTable(reflect.ValueOf(bean), reflect.Indirect(beanValue))
 			if err != nil {
 				e.Printfln("GetTable(%v,%v),err:%v", beanValue, reflectVal, err)
 				continue
 			}
 		}
+		for colName, col := range table.ColumnsMap {
+			colValue := reflectVal.FieldByName(colName)
+			if col.IsAutoIncrement || col.IsCombinedIndex || col.IsCreated || col.IsUpdated {
+			} else {
+				if colValue.IsValid() {
+					if ToString(colValue.Interface()) == "" {
+						switch colValue.Kind() {
+						case reflect.String:
+							SetDefaultValue(col, &colValue)
+						}
+					}
+					if ToString(colValue.Interface()) == "0" {
+						switch colValue.Kind() {
+						case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+							SetDefaultValue(col, &colValue)
+						}
+					}
+				}
+			}
+		}
 		pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal)
 		if err != nil {
+			e.Printfln("indexIsExistData(%v) err:%v", bean, err)
 			continue
 		}
 		if pkOldId > 0 {
@@ -294,6 +315,7 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 		if table.AutoIncrement != "" {
 			lastId, err = e.redisClient.HIncrBy(table.GetTableKey(), table.GetAutoIncrKey(), 1).Result()
 			if err != nil {
+				e.Printfln("HIncrBy(%v,%v) err:%v", table.GetTableKey(), table.GetAutoIncrKey(), err)
 				continue
 			}
 		}
@@ -314,11 +336,17 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 				valMap[fieldName] = ToString(colValue.Interface())
 			}
 		}
-		affectedRows++
+		affectBeans = append(affectBeans, bean)
+	}
+	if table == nil {
+		return 0, ERR_UnKnowTable
+	}
+	if len(affectBeans) == 0 {
+		return 0, Err_DataHadAvailable
 	}
 	_, err = e.redisClient.HMSet(table.GetTableKey(), valMap).Result()
 	if err == nil {
-		for _, bean := range beans {
+		for _, bean := range affectBeans {
 			beanValue := reflect.ValueOf(bean)
 			reflectVal := reflect.Indirect(beanValue)
 			err = e.indexUpdate(table, beanValue, reflectVal)
@@ -327,7 +355,7 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 			}
 		}
 	}
-	return affectedRows, err
+	return len(affectBeans), err
 }
 
 //Done:unique index is exist? -> indexIsExistData
@@ -338,6 +366,27 @@ func (e *Engine) Insert(bean interface{}) error {
 	if err != nil {
 		return err
 	}
+	for colName, col := range table.ColumnsMap {
+		colValue := reflectVal.FieldByName(colName)
+		if col.IsAutoIncrement || col.IsCombinedIndex || col.IsCreated || col.IsUpdated {
+		} else {
+			if colValue.IsValid() {
+				if ToString(colValue.Interface()) == "" {
+					switch colValue.Kind() {
+					case reflect.String:
+						SetDefaultValue(col, &colValue)
+					}
+				}
+				if ToString(colValue.Interface()) == "0" {
+					switch colValue.Kind() {
+					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+						SetDefaultValue(col, &colValue)
+					}
+				}
+			}
+		}
+	}
+
 	pkOldId, err := e.indexIsExistData(table, beanValue, reflectVal)
 	if err != nil {
 		return err
@@ -537,6 +586,9 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 
 	res, err := e.redisClient.HIncrBy(table.GetTableKey(), GetFieldName(pkOldId, col), val).Result()
 	return res, err
+}
+func (e *Engine) Sum(bean interface{}, cols string) (int64, error) {
+	return 0, nil
 }
 func (e *Engine) Update(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)

@@ -39,6 +39,7 @@ type SchemaTablesTb struct {
 
 func SchemaTablesFromTable(table *Table) *SchemaTablesTb {
 	return &SchemaTablesTb{
+		Id:            table.TableId,
 		TableName:     table.Name,
 		TableComment:  table.Name,
 		PrimaryKey:    table.PrimaryKey,
@@ -49,8 +50,9 @@ func SchemaTablesFromTable(table *Table) *SchemaTablesTb {
 }
 
 type Table struct {
-	Name          string
-	Type          reflect.Type
+	TableId int64
+	Name    string
+	//Type          reflect.Type
 	ColumnsSeq    []string
 	ColumnsMap    map[string]*Column
 	IndexesMap    map[string]*Index
@@ -63,6 +65,7 @@ type Table struct {
 
 func TableFromSchemaTables(table *SchemaTablesTb) *Table {
 	return &Table{
+		TableId:       table.Id,
 		Name:          table.TableName,
 		PrimaryKey:    table.PrimaryKey,
 		AutoIncrement: table.AutoIncrement,
@@ -74,7 +77,7 @@ func TableFromSchemaTables(table *SchemaTablesTb) *Table {
 }
 
 func NewEmptyTable() *Table {
-	return &Table{Name: "", Type: nil,
+	return &Table{Name: "",
 		ColumnsSeq: make([]string, 0),
 		ColumnsMap: make(map[string]*Column),
 		IndexesMap: make(map[string]*Index),
@@ -113,6 +116,9 @@ func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName, comment 
 
 	if indexType == IndexType_UnSupport {
 		return
+	}
+	if isUnique {
+		indexType = IndexType_IdScore
 	}
 	index := &Index{
 		NameKey:     table.GetIndexKey(columnName),

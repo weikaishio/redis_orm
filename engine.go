@@ -8,8 +8,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/mkideal/log"
-)
+	)
 
 //type ORM interface {
 //	Insert()
@@ -34,7 +33,7 @@ todo:权限控制~
 
 type Engine struct {
 	redisClient *RedisClientProxy
-	Tables      map[reflect.Type]*Table
+	Tables      map[string]*Table
 	tablesMutex *sync.RWMutex
 	isShowLog   bool
 
@@ -46,12 +45,21 @@ func NewEngine(redisCli *redis.Client) *Engine {
 	redisCliProxy := NewRedisCliProxy(redisCli)
 	engine := &Engine{
 		redisClient: redisCliProxy,
-		Tables:      make(map[reflect.Type]*Table),
+		Tables:      make(map[string]*Table),
 		tablesMutex: &sync.RWMutex{},
 		TZLocation:  time.Local,
 		isShowLog:   false,
 	}
 	redisCliProxy.engine = engine
+	//tables, err := engine.ReloadTables()
+	//if err != nil {
+	//	engine.Printfln("ReloadTables err:%v", err)
+	//}
+	//if len(tables) > 0 {
+	//	for _, table := range tables {
+	//		engine.Tables[table.Name] = table
+	//	}
+	//}
 	return engine
 }
 func (e *Engine) IsShowLog(isShow bool) {
@@ -80,17 +88,22 @@ func (e *Engine) GetTable(beanValue, beanIndirectValue reflect.Value) (*Table, e
 	if beanValue.Elem().Kind() == reflect.Struct ||
 		beanValue.Elem().Kind() == reflect.Interface {
 		e.tablesMutex.RLock()
-		table, ok := e.Tables[beanValue.Type()]
+		table, ok := e.Tables[e.tbName(beanIndirectValue)]
 		e.tablesMutex.RUnlock()
 		if !ok {
-			var err error
-			table, err = e.mapTable(beanIndirectValue)
-			if err != nil {
-				return nil, err
+			if strings.Contains(NeedMapTable, e.tbName(beanIndirectValue)) {
+				var err error
+				table, err = e.mapTable(beanIndirectValue)
+				if err != nil {
+					return nil, err
+				}
+				e.tablesMutex.Lock()
+				e.Tables[table.Name] = table
+				e.tablesMutex.Unlock()
+			} else {
+				e.Printfln("table:%s, not found", e.tbName(beanIndirectValue))
+				return nil, ERR_UnKnowTable
 			}
-			e.tablesMutex.Lock()
-			e.Tables[beanValue.Type()] = table
-			e.tablesMutex.Unlock()
 		}
 
 		return table, nil
@@ -103,7 +116,7 @@ func GetFieldName(pkId interface{}, colName string) string {
 func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 	typ := v.Type()
 	table := NewEmptyTable()
-	table.Type = typ
+	//table.Type = typ
 	table.Name = strings.ToLower(e.tbName(v))
 	//ptr or struct:typ.NumField()
 	for i := 0; i < typ.NumField(); i++ {
@@ -173,7 +186,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 				table.AddIndex(fieldType, indexName, col.Name, col.Comment, isUnique)
 			}
 		} else {
-			log.Warn("MapTable field:%s, not has tag", typ.Field(i).Name)
+			e.Printfln("MapTable field:%s, not has tag", typ.Field(i).Name)
 		}
 	}
 

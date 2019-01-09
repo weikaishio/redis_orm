@@ -44,11 +44,14 @@ const (
 
 	ScoreMax = "+inf"
 	ScoreMin = "-inf"
+
+	NeedMapTable = "schematablestb,schemacolumnstb,schemaindexstb"
 )
 
 var (
-	ERR_UnKnowField           = errors.New("redis-orm-error:unknow field")
-	ERR_UnKnowError           = errors.New("redis-orm-error:unknow error")
+	ERR_UnKnowField           = errors.New("redis-orm-error:unknown field")
+	ERR_UnKnowTable           = errors.New("redis-orm-error:unknown table")
+	ERR_UnKnowError           = errors.New("redis-orm-error:unknown error")
 	ERR_NotSupportIndexField  = errors.New("redis-orm-error:not support this filed's index")
 	Err_UnSupportedType       = errors.New("redis-orm-error:unsupported type")
 	Err_UnSupportedTableModel = errors.New("redis-orm-error:unsupported table model")
