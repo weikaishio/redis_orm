@@ -20,19 +20,19 @@ todo:改表结构？需要存一个版本号~ pub/sub, 修改了表结构需要r
 
 */
 type SchemaEngine struct {
-	engine *Engine
+	*Engine
 }
 
 func NewSchemaEngine(e *Engine) *SchemaEngine {
 	schemaEngine := &SchemaEngine{
-		engine: e,
+		Engine: e,
 	}
 	var beans []interface{}
 	beans = append(beans, &SchemaTablesTb{}, &SchemaColumnsTb{}, &SchemaIndexsTb{})
 	for _, bean := range beans {
 		beanValue := reflect.ValueOf(bean)
 		beanIndirectValue := reflect.Indirect(beanValue)
-		schemaEngine.engine.GetTableByReflect(beanValue, beanIndirectValue)
+		schemaEngine.GetTableByReflect(beanValue, beanIndirectValue)
 	}
 	return schemaEngine
 }
@@ -40,23 +40,24 @@ func NewSchemaEngine(e *Engine) *SchemaEngine {
 func (s *SchemaEngine) CreateTable(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	beanIndirectValue := reflect.Indirect(beanValue)
-	s.engine.tablesMutex.RLock()
-	table, ok := s.engine.Tables[s.engine.TableName(beanIndirectValue)]
-	s.engine.tablesMutex.RUnlock()
-	if ok {
+
+	table, has := s.GetTableByName(s.TableName(beanIndirectValue))
+	if has {
+		s.Printfln("GetTableByName(%s),has", s.TableName(beanIndirectValue))
 		return Err_DataHadAvailable
 	}
-	table, err := s.engine.mapTable(beanIndirectValue)
+
+	table, err := s.mapTable(beanIndirectValue)
 	if err != nil {
 		return err
 	}
 	if table != nil {
-		s.engine.tablesMutex.Lock()
-		s.engine.Tables[table.Name] = table
-		s.engine.tablesMutex.Unlock()
+		s.tablesMutex.Lock()
+		s.Tables[table.Name] = table
+		s.tablesMutex.Unlock()
 	}
 	tablesTb := SchemaTablesFromTable(table)
-	err = s.engine.Insert(tablesTb)
+	err = s.Insert(tablesTb)
 	if err != nil {
 		if err != nil {
 			return err
@@ -68,7 +69,7 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 		columnsTb := SchemaColumnsFromColumn(tablesTb.Id, v)
 		columnAry = append(columnAry, columnsTb)
 	}
-	affectedRows, err := s.engine.InsertMulti(columnAry...)
+	affectedRows, err := s.InsertMulti(columnAry...)
 	if err != nil {
 		return err
 	}
@@ -80,16 +81,22 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 		indexsTb := SchemaIndexsFromColumn(tablesTb.Id, v)
 		indexAry = append(indexAry, indexsTb)
 	}
-	affectedRows, err = s.engine.InsertMulti(indexAry...)
+	affectedRows, err = s.InsertMulti(indexAry...)
 	if err != nil {
 		return err
 	}
 	if affectedRows == 0 {
 		return ERR_UnKnowError
 	}
-	s.engine.tablesMutex.Lock()
-	s.engine.Tables[table.Name] = table
-	s.engine.tablesMutex.Unlock()
+	s.tablesMutex.Lock()
+	s.Tables[table.Name] = table
+	s.tablesMutex.Unlock()
+
+	if s.isSync2DB && table.IsSync2DB {
+		s.syncDB.Create2DB(bean)
+	} else {
+		s.Printfln("s.isSync2DB:%b, table.IsSync2DB:%b", s.isSync2DB, table.IsSync2DB)
+	}
 	return nil
 }
 
@@ -100,7 +107,7 @@ todo: AddColumn
 func (s *SchemaEngine) AddColumn(bean interface{}, colName string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
-	_, err := s.engine.mapTable(reflectVal)
+	_, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
 	}
@@ -111,7 +118,7 @@ func (s *SchemaEngine) AddColumn(bean interface{}, colName string) error {
 	//			columnsTb := SchemaColumnsFromColumn(tablesTb.Id, v)
 	//			columnAry = append(columnAry, columnsTb)
 	//		}
-	//		affectedRows, err := s.engine.InsertMulti(columnAry...)
+	//		affectedRows, err := s.InsertMulti(columnAry...)
 	//		if err != nil {
 	//			return err
 	//		}
@@ -132,47 +139,49 @@ func (s *SchemaEngine) TableDrop(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	beanIndirectValue := reflect.Indirect(beanValue)
 
-	table, has := s.engine.GetTableByName(s.engine.TableName(beanIndirectValue))
+	table, has := s.GetTableByName(s.TableName(beanIndirectValue))
 	if !has {
 		return ERR_UnKnowTable
 	}
 
 	//tablesTb := SchemaTablesFromTable(table)
-	affectedRow, err := s.engine.DeleteByCondition(&SchemaTablesTb{}, NewSearchConditionV2(table.Name, table.Name, "TableName"))
+	affectedRow, err := s.DeleteByCondition(&SchemaTablesTb{}, NewSearchConditionV2(table.Name, table.Name, "TableName"))
 	if err != nil {
-		return err
+		s.Printfln("Delete Table err:%v", err)
 	}
 	if affectedRow == 0 {
-		return Err_DataNotAvailable
+		//return Err_DataNotAvailable
+		s.Printfln("Delete Table: table not available")
 	}
 
-	affectedRow, err = s.engine.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, table.TableId, "TableId"))
+	affectedRow, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, table.TableId, "TableId"))
 	if err != nil {
-		return err
+		s.Printfln("Delete Column err:%v", err)
 	}
 	if affectedRow == 0 {
-		return Err_DataNotAvailable
+		//return Err_DataNotAvailable
+		s.Printfln("Delete Column: column not available")
 	}
 
-	_, err = s.engine.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, table.TableId, "TableId"))
+	_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, table.TableId, "TableId"))
 	if err != nil {
 		return err
 	}
 
-	err = s.engine.TableTruncate(bean)
+	err = s.TableTruncate(bean)
 	if err == nil {
-		s.engine.tablesMutex.Lock()
-		delete(s.engine.Tables, table.Name)
-		s.engine.tablesMutex.Unlock()
+		s.tablesMutex.Lock()
+		delete(s.Tables, table.Name)
+		s.tablesMutex.Unlock()
 	}
 	return err
 }
 
 func (s *SchemaEngine) ShowTables() []string {
-	s.engine.tablesMutex.RLock()
-	defer s.engine.tablesMutex.RUnlock()
+	s.tablesMutex.RLock()
+	defer s.tablesMutex.RUnlock()
 	tableAry := make([]string, 0)
-	for _, v := range s.engine.Tables {
+	for _, v := range s.Tables {
 		if !strings.Contains(NeedMapTable, v.Name) {
 			tableAry = append(tableAry, v.Name)
 		}
@@ -183,12 +192,12 @@ func (s *SchemaEngine) ShowTables() []string {
 func (s *SchemaEngine) ReloadTables() ([]*Table, error) {
 	tables := make([]*Table, 0)
 	var tablesAry []*SchemaTablesTb
-	count, err := s.engine.Find(0, int64(math.MaxInt64), NewSearchConditionV2(ScoreMin, ScoreMax, "Id"), &tablesAry)
+	count, err := s.Find(0, int64(math.MaxInt64), NewSearchConditionV2(ScoreMin, ScoreMax, "Id"), &tablesAry)
 	if err != nil {
 		return tables, err
 	}
 	if count != int64(len(tablesAry)) {
-		s.engine.Printfln("ReloadTables count:%d !=len(tablesAry):%d", count, len(tablesAry))
+		s.Printfln("ReloadTables count:%d !=len(tablesAry):%d", count, len(tablesAry))
 		return tables, ERR_UnKnowError
 	}
 
@@ -196,9 +205,9 @@ func (s *SchemaEngine) ReloadTables() ([]*Table, error) {
 		table := TableFromSchemaTables(schemaTable)
 
 		var columnsAry []*SchemaColumnsTb
-		_, err := s.engine.Find(0, int64(math.MaxInt64), NewSearchConditionV2(schemaTable.Id, schemaTable.Id, "TableId"), &columnsAry)
+		_, err := s.Find(0, int64(math.MaxInt64), NewSearchConditionV2(schemaTable.Id, schemaTable.Id, "TableId"), &columnsAry)
 		if err != nil {
-			s.engine.Printfln("SchemaTables2MapTables(%v) find SchemaColumnsTb,err:%v", schemaTable, err)
+			s.Printfln("SchemaTables2MapTables(%v) find SchemaColumnsTb,err:%v", schemaTable, err)
 			continue
 		}
 		for _, schemaColumn := range columnsAry {
@@ -207,9 +216,9 @@ func (s *SchemaEngine) ReloadTables() ([]*Table, error) {
 		}
 
 		var indexsAry []*SchemaIndexsTb
-		_, err = s.engine.Find(0, int64(math.MaxInt64), NewSearchConditionV2(schemaTable.Id, schemaTable.Id, "TableId"), &indexsAry)
+		_, err = s.Find(0, int64(math.MaxInt64), NewSearchConditionV2(schemaTable.Id, schemaTable.Id, "TableId"), &indexsAry)
 		if err != nil {
-			s.engine.Printfln("SchemaTables2MapTables(%v) find SchemaIndexsTb,err:%v", schemaTable, err)
+			s.Printfln("SchemaTables2MapTables(%v) find SchemaIndexsTb,err:%v", schemaTable, err)
 			continue
 		}
 		for _, schemaIndex := range indexsAry {
@@ -219,7 +228,7 @@ func (s *SchemaEngine) ReloadTables() ([]*Table, error) {
 	}
 	if len(tables) > 0 {
 		for _, table := range tables {
-			s.engine.Tables[table.Name] = table
+			s.Tables[table.Name] = table
 		}
 	}
 	return tables, nil

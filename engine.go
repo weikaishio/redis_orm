@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
+	"github.com/go-xorm/xorm"
+	"github.com/weikaishio/redis_orm/sync2db"
 )
 
 //type ORM interface {
@@ -42,6 +44,9 @@ type Engine struct {
 
 	Schema *SchemaEngine
 	Index  *IndexEngine
+
+	isSync2DB bool
+	syncDB    *sync2db.Sync2DB
 }
 
 func NewEngine(redisCli *redis.Client) *Engine {
@@ -61,6 +66,11 @@ func NewEngine(redisCli *redis.Client) *Engine {
 	index := NewIndexEngine(engine)
 	engine.Index = index
 	return engine
+}
+func (e *Engine) SetSync2DB(mysqlOrm *xorm.Engine) {
+	e.syncDB = sync2db.NewSync2DB(mysqlOrm)
+	e.syncDB.IsShowLog(e.isShowLog)
+	e.isSync2DB = true
 }
 func (e *Engine) IsShowLog(isShow bool) {
 	e.isShowLog = isShow
@@ -185,6 +195,8 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 						col.IsCombinedIndex = true
 					}
 					continue
+				} else if keyLower == TagSync2DB {
+					table.IsSync2DB = true
 				} else {
 					//abondon
 				}
@@ -256,7 +268,9 @@ func SetDefaultValue(col *Column, value *reflect.Value) {
 	case reflect.Map:
 		//todo:SetValue4Map
 	case reflect.Bool:
-		value.SetBool(false)
+		if !value.Bool() {
+			value.SetBool(false)
+		}
 	default:
 	}
 }

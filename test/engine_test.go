@@ -3,20 +3,18 @@ package test
 import (
 	"encoding/json"
 	"github.com/go-redis/redis"
-	"github.com/mkideal/log"
 	"github.com/weikaishio/redis_orm"
-	"github.com/weikaishio/redis_orm/test/models"
+	"github.com/weikaishio/redis_orm/example/models"
 	"strings"
 	"testing"
-)
+	)
 
 var (
 	engine *redis_orm.Engine
 )
 
-//test and log?
+//test and log? use printf
 func init() {
-	log.SetLevelFromString("TRACE")
 	options := redis.Options{
 		Addr:     "127.0.0.1:6379",
 		Password: "",
@@ -56,7 +54,7 @@ func TestEngine_Insert(t *testing.T) {
 	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
 	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
 	//t.Logf("tables:%v", engine.Tables)
-	//engine.TableTruncate(&models.Faq{})
+	engine.TableTruncate(&models.FaqTb{})
 	for _, table := range engine.Tables {
 		if strings.Contains(redis_orm.NeedMapTable, table.Name) {
 			continue

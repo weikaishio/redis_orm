@@ -1,6 +1,8 @@
 package redis_orm
 
 import (
+	"fmt"
+	"github.com/weikaishio/distributed_lib/db_lazy"
 	"reflect"
 	"time"
 )
@@ -150,15 +152,14 @@ func (e *Engine) count(searchCon *SearchCondition, table *Table) (int64, error) 
 	count, err := e.Index.Count(table, searchCon)
 	return count, err
 }
-func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry interface{}) (int64, error) {
+func (e *Engine) TableFromBeanAryReflect(beanAry interface{}) (*Table, error) {
 	sliceValue := reflect.Indirect(reflect.ValueOf(beanAry))
 	if sliceValue.Kind() != reflect.Slice {
-		return 0, Err_NeedSlice
+		return nil, Err_NeedSlice
 	}
 
 	var (
 		table      *Table
-		err        error
 		reflectVal reflect.Value
 	)
 	sliceElementType := sliceValue.Type().Elem()
@@ -169,7 +170,7 @@ func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry i
 			var has bool
 			table, has = e.GetTableByName(e.TableName(reflectVal))
 			if !has {
-				return 0, ERR_UnKnowTable
+				return nil, ERR_UnKnowTable
 			}
 		}
 	} else if sliceElementType.Kind() == reflect.Struct || sliceElementType.Kind() == reflect.Interface {
@@ -178,11 +179,21 @@ func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry i
 		var has bool
 		table, has = e.GetTableByName(e.TableName(reflectVal))
 		if !has {
-			return 0, ERR_UnKnowTable
+			return nil, ERR_UnKnowTable
 		}
 	}
 	if table == nil {
-		return 0, Err_UnSupportedTableModel
+		return nil, Err_UnSupportedTableModel
+	}
+	return table, nil
+}
+func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry interface{}) (int64, error) {
+	sliceValue := reflect.Indirect(reflect.ValueOf(beanAry))
+	sliceElementType := sliceValue.Type().Elem()
+
+	table, err := e.TableFromBeanAryReflect(beanAry)
+	if err != nil {
+		return 0, err
 	}
 	count, err := e.count(searchCon, table)
 	if err != nil {
@@ -352,6 +363,12 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 	if err == nil {
 		for _, bean := range affectBeans {
 			beanValue := reflect.ValueOf(bean)
+			if e.isSync2DB && table.IsSync2DB {
+				e.syncDB.Add(bean, db_lazy.LazyOperateType_Insert, nil, "")
+				e.Printfln("e.isSync2DB:%b && table.IsSync2DB:%b,e.syncDB.Add",e.isSync2DB , table.IsSync2DB)
+			}else{
+				e.Printfln("e.isSync2DB:%b && table.IsSync2DB:%b",e.isSync2DB , table.IsSync2DB)
+			}
 			reflectVal := reflect.Indirect(beanValue)
 			err = e.Index.Update(table, beanValue, reflectVal)
 			if err != nil {
@@ -432,6 +449,9 @@ func (e *Engine) Insert(bean interface{}) error {
 		err = e.Index.Update(table, beanValue, reflectVal)
 		if err != nil {
 			e.Printfln("Insert Update(%s,%v) err:%v", table.Name, bean, err)
+		}
+		if e.isSync2DB && table.IsSync2DB {
+			e.syncDB.Add(beanValue, db_lazy.LazyOperateType_Insert, nil, "")
 		}
 	}
 	return err
@@ -565,6 +585,9 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 			if err != nil {
 				e.Printfln("UpdateMulti Update(%s) err:%v", table.Name, err)
 			}
+			if e.isSync2DB && table.IsSync2DB {
+				e.syncDB.Add(beanValue, db_lazy.LazyOperateType_Update, cols, fmt.Sprintf("id=%d", pkInt))
+			}
 		}
 	}
 
@@ -597,6 +620,13 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	}
 
 	res, err := e.redisClient.HIncrBy(table.GetTableKey(), GetFieldName(pkOldId, col), val).Result()
+	if err == nil {
+		if e.isSync2DB && table.IsSync2DB {
+			colValue := reflectVal.FieldByName(col)
+			colValue.SetInt(colValue.Int() + val)
+			e.syncDB.Add(beanValue, db_lazy.LazyOperateType_Update, []string{col}, fmt.Sprintf("id=%d", pkOldId))
+		}
+	}
 	return res, err
 }
 func (e *Engine) Sum(bean interface{}, searchCon *SearchCondition, col string) (int64, error) {
@@ -714,6 +744,9 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 		if err != nil {
 			e.Printfln("Update Update(%s) err:%v", table.Name, err)
 		}
+		if e.isSync2DB && table.IsSync2DB {
+			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, cols, fmt.Sprintf("id=%d", pkOldId))
+		}
 	}
 	return err
 }
@@ -755,6 +788,9 @@ func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition,
 			var pkInt int64
 			SetInt64FromStr(&pkInt, idStr)
 			e.Index.Delete(table, pkInt)
+			if e.isSync2DB && table.IsSync2DB {
+				e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, cols, fmt.Sprintf("id=%d", pkInt))
+			}
 		}
 	}
 	return len(idAry), nil
@@ -797,6 +833,9 @@ func (e *Engine) Delete(bean interface{}) error {
 	_, err = e.redisClient.HDel(table.GetTableKey(), fields...).Result()
 	if err == nil {
 		e.Index.Delete(table, pkInt)
+		if e.isSync2DB && table.IsSync2DB {
+			e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, nil, fmt.Sprintf("id=%d", pkInt))
+		}
 	}
 	return nil
 }
@@ -814,5 +853,6 @@ func (e *Engine) TableTruncate(bean interface{}) error {
 		return err
 	}
 	err = e.Index.Drop(table)
+	//todo:TableTruncate syncDB
 	return err
 }

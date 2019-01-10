@@ -28,6 +28,8 @@ const (
 	TagPrimaryKey = "pk"
 	//自增~ 暂只支持主键
 	TagAutoIncrement = "autoincr"
+	//配置在主键的tag上，配置了该tag才能生效同步到数据库
+	TagSync2DB = "sync2db"
 	//备注名
 	TagComment = "comment"
 	//是否支持自动写创建时间

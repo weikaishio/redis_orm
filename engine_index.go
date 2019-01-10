@@ -280,7 +280,6 @@ func (ixe *IndexEngine) IsExistData(table *Table, beanValue, reflectVal reflect.
 
 //todo: no thread safety! watch?
 func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value, cols ...string) error {
-	ixe.engine.Printfln("Update:%s,%v", table.Name, table.IndexesMap)
 	typ := reflectVal.Type()
 	_, has := typ.FieldByName(table.PrimaryKey)
 	if !has {

@@ -7,13 +7,12 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/xorm"
 	"github.com/mkideal/log"
-	"github.com/weikaishio/redis_orm/test/models"
+	"github.com/weikaishio/redis_orm/example/models"
 )
 
 var (
 	orm *xorm.Engine
 )
-
 
 func init() {
 	driver := "mysql"
@@ -33,7 +32,7 @@ func init() {
 func Benchmark_MysqlOrmGet(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		faq := &models.FaqTb{
-			Id: i,
+			Id: int64(i),
 		}
 		orm.Get(faq)
 	}
@@ -41,8 +40,8 @@ func Benchmark_MysqlOrmGet(b *testing.B) {
 func Benchmark_MysqlOrmInsert(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		faq := &models.FaqTb{
-			Title: fmt.Sprintf("title%d", i),
-			Content:fmt.Sprintf("contente%d",i),
+			Title:   fmt.Sprintf("title%d", i),
+			Content: fmt.Sprintf("contente%d", i),
 			Hearts:  i,
 		}
 		orm.InsertOne(faq)

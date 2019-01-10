@@ -31,6 +31,7 @@ type SchemaTablesTb struct {
 	TableComment  string `redis_orm:"dft '' index comment '表注释'"` //暂时没用上
 	PrimaryKey    string `redis_orm:"comment '主键字段'"`
 	AutoIncrement string `redis_orm:"comment '自增字段'"`
+	IsSync2DB     bool   `redis_orm:"comment '是否同步到数据库'"`
 	Created       string `redis_orm:"comment '创建时间字段'"`
 	Updated       string `redis_orm:"comment '更新时间字段'"`
 	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
@@ -44,6 +45,7 @@ func SchemaTablesFromTable(table *Table) *SchemaTablesTb {
 		TableComment:  table.Name,
 		PrimaryKey:    table.PrimaryKey,
 		AutoIncrement: table.AutoIncrement,
+		IsSync2DB:     table.IsSync2DB,
 		Created:       table.Created,
 		Updated:       table.Updated,
 	}
@@ -58,6 +60,7 @@ type Table struct {
 	IndexesMap    map[string]*Index
 	PrimaryKey    string
 	AutoIncrement string
+	IsSync2DB     bool
 	Created       string
 	Updated       string
 	mutex         sync.RWMutex
@@ -69,6 +72,7 @@ func TableFromSchemaTables(table *SchemaTablesTb) *Table {
 		Name:          table.TableName,
 		PrimaryKey:    table.PrimaryKey,
 		AutoIncrement: table.AutoIncrement,
+		IsSync2DB:     table.IsSync2DB,
 		ColumnsMap:    make(map[string]*Column),
 		IndexesMap:    make(map[string]*Index),
 		Created:       table.Created,

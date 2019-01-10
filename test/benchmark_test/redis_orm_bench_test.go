@@ -3,11 +3,10 @@ package benchmark_test
 import (
 	"fmt"
 	"github.com/go-redis/redis"
-	"github.com/mkideal/log"
 	"github.com/weikaishio/redis_orm"
-	"github.com/weikaishio/redis_orm/test/models"
+	"github.com/weikaishio/redis_orm/example/models"
 	"testing"
-)
+	)
 
 var (
 	engine *redis_orm.Engine
@@ -25,7 +24,6 @@ func init() {
 
 	engine = redis_orm.NewEngine(redisClient)
 
-	log.SetLevelFromString("TRACE")
 }
 
 // go test -v -bench=".*"
