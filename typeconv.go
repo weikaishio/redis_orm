@@ -2,7 +2,6 @@ package redis_orm
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 )
 
@@ -140,6 +139,5 @@ func SetBoolFromStr(ptr *bool, s string) error {
 	if err == nil {
 		*ptr = b
 	}
-	fmt.Printf("!~~~~~~!!s:%s,val:%b\n", s, b)
 	return err
 }

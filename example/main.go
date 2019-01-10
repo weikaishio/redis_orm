@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/go-xorm/xorm"
+	"github.com/mkideal/log"
 	"github.com/weikaishio/redis_orm"
 	"github.com/weikaishio/redis_orm/example/models"
 	"github.com/weikaishio/redis_orm/sync2db"
+	"time"
 )
 
 var (
@@ -28,6 +30,7 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("xorm.NewEngine:%s,err:%v\n", dataSourceName, err))
 	}
+	mysqlOrm.ShowSQL(true)
 
 	options := redis.Options{
 		Addr:     "127.0.0.1:6379",
@@ -46,21 +49,26 @@ func init() {
 	engine.SetSync2DB(mysqlOrm)
 }
 func main() {
+	time.Sleep(time.Second)
 	faq := &models.FaqTb{
-		Title:  "index3",
-		Hearts: 1,
+		Title:  "index112abc1234456",
+		Hearts: 11111,
 	}
+	log.Trace("test log")
+	//engine.Insert(faq)
 	//engine.Schema.TableDrop(faq)
 	//engine.Schema.CreateTable(faq)
 	ary := make([]interface{}, 0)
 	ary = append(ary, faq)
-	faq = &models.FaqTb{
-		Title:  "index11a21",
-		Hearts: 21,
-	}
-	ary = append(ary, faq)
 	affected, err := engine.InsertMulti(ary...)
 	engine.Printfln("InsertMulti(%v),affected:%d, err:%v", ary, affected, err)
+
+	//engine.UpdateMulti(faq, redis_orm.NewSearchConditionV2(1, 14, "Id"), "Hearts")
+
+	val, err := engine.Incr(&models.FaqTb{Id: 2}, "Hearts", 333)
+	engine.Printfln("engine.Incr val:%d,err:%v", val, err)
+
 	sync2db.ListenQuitAndDump()
+	engine.Quit()
 	engine.Printfln("quit")
 }

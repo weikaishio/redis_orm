@@ -365,9 +365,6 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 			beanValue := reflect.ValueOf(bean)
 			if e.isSync2DB && table.IsSync2DB {
 				e.syncDB.Add(bean, db_lazy.LazyOperateType_Insert, nil, "")
-				e.Printfln("e.isSync2DB:%b && table.IsSync2DB:%b,e.syncDB.Add",e.isSync2DB , table.IsSync2DB)
-			}else{
-				e.Printfln("e.isSync2DB:%b && table.IsSync2DB:%b",e.isSync2DB , table.IsSync2DB)
 			}
 			reflectVal := reflect.Indirect(beanValue)
 			err = e.Index.Update(table, beanValue, reflectVal)
@@ -451,7 +448,7 @@ func (e *Engine) Insert(bean interface{}) error {
 			e.Printfln("Insert Update(%s,%v) err:%v", table.Name, bean, err)
 		}
 		if e.isSync2DB && table.IsSync2DB {
-			e.syncDB.Add(beanValue, db_lazy.LazyOperateType_Insert, nil, "")
+			e.syncDB.Add(bean, db_lazy.LazyOperateType_Insert, nil, "")
 		}
 	}
 	return err
@@ -586,7 +583,7 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 				e.Printfln("UpdateMulti Update(%s) err:%v", table.Name, err)
 			}
 			if e.isSync2DB && table.IsSync2DB {
-				e.syncDB.Add(beanValue, db_lazy.LazyOperateType_Update, cols, fmt.Sprintf("id=%d", pkInt))
+				e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, cols, fmt.Sprintf("id=%d", pkInt))
 			}
 		}
 	}
@@ -623,8 +620,8 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	if err == nil {
 		if e.isSync2DB && table.IsSync2DB {
 			colValue := reflectVal.FieldByName(col)
-			colValue.SetInt(colValue.Int() + val)
-			e.syncDB.Add(beanValue, db_lazy.LazyOperateType_Update, []string{col}, fmt.Sprintf("id=%d", pkOldId))
+			colValue.SetInt(res)
+			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{col}, fmt.Sprintf("id=%d", pkOldId))
 		}
 	}
 	return res, err

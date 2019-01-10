@@ -47,6 +47,7 @@ type Engine struct {
 
 	isSync2DB bool
 	syncDB    *sync2db.Sync2DB
+	wait      *sync.WaitGroup
 }
 
 func NewEngine(redisCli *redis.Client) *Engine {
@@ -57,6 +58,7 @@ func NewEngine(redisCli *redis.Client) *Engine {
 		tablesMutex: &sync.RWMutex{},
 		TZLocation:  time.Local,
 		isShowLog:   false,
+		wait:        &sync.WaitGroup{},
 	}
 	redisCliProxy.engine = engine
 
@@ -68,12 +70,18 @@ func NewEngine(redisCli *redis.Client) *Engine {
 	return engine
 }
 func (e *Engine) SetSync2DB(mysqlOrm *xorm.Engine) {
-	e.syncDB = sync2db.NewSync2DB(mysqlOrm)
+	e.syncDB = sync2db.NewSync2DB(mysqlOrm, e.wait)
 	e.syncDB.IsShowLog(e.isShowLog)
 	e.isSync2DB = true
+	e.wait.Add(1)
 }
 func (e *Engine) IsShowLog(isShow bool) {
 	e.isShowLog = isShow
+}
+func (e *Engine) Quit() {
+	e.Printfln("redis_orm Engine's Quit begin")
+	e.wait.Wait()
+	e.Printfln("redis_orm Engine's Quit end")
 }
 func (e *Engine) Printfln(format string, a ...interface{}) {
 	if e.isShowLog {

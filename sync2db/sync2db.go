@@ -6,6 +6,7 @@ import (
 	"github.com/go-xorm/xorm"
 	"github.com/weikaishio/distributed_lib/db_lazy"
 	"reflect"
+	"sync"
 	"time"
 )
 
@@ -13,21 +14,23 @@ type Sync2DB struct {
 	mysqlOrm  *xorm.Engine
 	isShowLog bool
 	*db_lazy.LazyMysql
+	wait *sync.WaitGroup
 }
 
 func (s *Sync2DB) IsShowLog(isShow bool) {
 	s.isShowLog = isShow
 }
-func NewSync2DB(mysqlOrm *xorm.Engine) *Sync2DB {
+func NewSync2DB(mysqlOrm *xorm.Engine, wait *sync.WaitGroup) *Sync2DB {
 	sync2DB := &Sync2DB{
 		mysqlOrm: mysqlOrm,
+		wait:     wait,
 	}
-	sync2DB.LazyMysql = db_lazy.NewLazyMysql(mysqlOrm, 30)
+	sync2DB.LazyMysql = db_lazy.NewLazyMysql(mysqlOrm, 10)
 	go func() {
 		go sync2DB.LazyMysql.Exec()
-		ListenQuitAndDump()
-		sync2DB.Printfln("ListenQuitAndDump begin sync2DB.lazyMysql.Quit")
+		ListenQuitAndDump() //expose a quit method or listen kill process signal
 		sync2DB.LazyMysql.Quit()
+		sync2DB.wait.Done()
 	}()
 	return sync2DB
 }
@@ -35,7 +38,7 @@ func (s *Sync2DB) Create2DB(bean interface{}) error {
 	err := s.mysqlOrm.Sync(bean)
 	if err != nil {
 		s.Printfln("mysqlOrm.Sync(%v),err:%v", reflect.TypeOf(bean).Name(), err)
-	}else{
+	} else {
 		s.Printfln("mysqlOrm.Sync(%v)", reflect.TypeOf(bean).Name())
 	}
 	return err
