@@ -60,6 +60,7 @@ type SearchCondition struct {
 	IsAsc         bool
 }
 
+//NewSearchCondition will be deprecated, please use NewSearchConditionV2 instead
 func NewSearchCondition(indexType IndexType, minVal, maxVal interface{}, column ...string) *SearchCondition {
 	return &SearchCondition{
 		SearchColumn:  column,

@@ -8,8 +8,17 @@ import (
 	"strings"
 )
 
+type IndexEngine struct {
+	engine *Engine
+}
+
+func NewIndexEngine(e *Engine) *IndexEngine {
+	return &IndexEngine{
+		engine: e,
+	}
+}
 //Done:combined index
-func (e *Engine) indexGetId(table *Table, searchCon *SearchCondition) (int64, error) {
+func (ixe *IndexEngine) GetId(table *Table, searchCon *SearchCondition) (int64, error) {
 	index, ok := table.IndexesMap[strings.ToLower(searchCon.Name())]
 	if !ok {
 		err := fmt.Errorf("searchCon.index:%s not exist\n", strings.ToLower(searchCon.Name()))
@@ -23,7 +32,7 @@ func (e *Engine) indexGetId(table *Table, searchCon *SearchCondition) (int64, er
 			Offset: 0,
 			Count:  1,
 		}
-		res, err := e.redisClient.ZRangeByScore(index.NameKey, redisZ).Result()
+		res, err := ixe.engine.redisClient.ZRangeByScore(index.NameKey, redisZ).Result()
 		if err == nil {
 			if len(res) == 0 {
 				return 0, nil
@@ -32,23 +41,23 @@ func (e *Engine) indexGetId(table *Table, searchCon *SearchCondition) (int64, er
 			SetInt64FromStr(&id, res[0])
 			return id, nil
 		} else {
-			e.Printfln("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
+			ixe.engine.Printfln("GetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
 			return 0, err
 		}
 	case IndexType_IdScore:
-		res, err := e.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
+		res, err := ixe.engine.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
 		if err == nil || (err != nil && err.Error() == "redis: nil") {
 			return int64(res), nil
 		} else {
-			e.Printfln("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
+			ixe.engine.Printfln("GetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
 			return 0, err
 		}
 	case IndexType_UnSupport:
-		e.Printfln("indexGetId unsupport index type")
+		ixe.engine.Printfln("GetId unsupport index type")
 	}
 	return 0, nil
 }
-func (e *Engine) indexCount(table *Table, searchCon *SearchCondition) (count int64, err error) {
+func (ixe *IndexEngine) Count(table *Table, searchCon *SearchCondition) (count int64, err error) {
 	index, ok := table.IndexesMap[strings.ToLower(searchCon.Name())]
 	if !ok {
 		err = fmt.Errorf("searchCon.index:%s not exist\n", strings.ToLower(searchCon.Name()))
@@ -56,28 +65,28 @@ func (e *Engine) indexCount(table *Table, searchCon *SearchCondition) (count int
 	}
 	switch index.Type {
 	case IndexType_IdMember:
-		count, err = e.redisClient.ZCount(index.NameKey, ToString(searchCon.FieldMinValue), ToString(searchCon.FieldMaxValue)).Result()
+		count, err = ixe.engine.redisClient.ZCount(index.NameKey, ToString(searchCon.FieldMinValue), ToString(searchCon.FieldMaxValue)).Result()
 		if err != nil {
-			e.Printfln("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
+			ixe.engine.Printfln("GetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
 		}
 		return
 	case IndexType_IdScore:
 		var res float64
-		res, err = e.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
+		res, err = ixe.engine.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
 		if err == nil || (err != nil && err.Error() == "redis: nil") {
 			if err == nil && res > 0 {
 				count = 1
 			}
 		} else {
-			e.Printfln("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
+			ixe.engine.Printfln("GetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
 		}
 		return
 	case IndexType_UnSupport:
-		e.Printfln("indexGetId unsupport index type")
+		ixe.engine.Printfln("GetId unsupport index type")
 	}
 	return
 }
-func (e *Engine) indexRange(table *Table, searchCon *SearchCondition, offset, count int64) (idAry []string, err error) {
+func (ixe *IndexEngine) Range(table *Table, searchCon *SearchCondition, offset, count int64) (idAry []string, err error) {
 	index, ok := table.IndexesMap[strings.ToLower(searchCon.Name())]
 	if !ok {
 		err = fmt.Errorf("searchCon.index:%s not exist\n", strings.ToLower(searchCon.Name()))
@@ -92,30 +101,30 @@ func (e *Engine) indexRange(table *Table, searchCon *SearchCondition, offset, co
 			Count:  count,
 		}
 		if searchCon.IsAsc {
-			idAry, err = e.redisClient.ZRangeByScore(index.NameKey, redisZ).Result()
+			idAry, err = ixe.engine.redisClient.ZRangeByScore(index.NameKey, redisZ).Result()
 		} else {
-			idAry, err = e.redisClient.ZRevRangeByScore(index.NameKey, redisZ).Result()
+			idAry, err = ixe.engine.redisClient.ZRevRangeByScore(index.NameKey, redisZ).Result()
 		}
 		if err != nil {
-			e.Printfln("indexGetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
+			ixe.engine.Printfln("GetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
 		}
 
 		return idAry, nil
 	case IndexType_IdScore:
 		var res float64
-		res, err = e.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
+		res, err = ixe.engine.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
 		if err == nil || (err != nil && err.Error() == "redis: nil") {
 			idAry = append(idAry, ToString(res))
 		} else {
-			e.Printfln("indexGetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
+			ixe.engine.Printfln("GetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
 		}
 		return idAry, nil
 	case IndexType_UnSupport:
-		e.Printfln("indexGetId unsupport index type")
+		ixe.engine.Printfln("GetId unsupport index type")
 	}
 	return idAry, nil
 }
-func (e *Engine) indexDelete(table *Table, idInt int64) error {
+func (ixe *IndexEngine) Delete(table *Table, idInt int64) error {
 	if table.PrimaryKey == "" {
 		return Err_PrimaryKeyNotFound
 	}
@@ -123,19 +132,19 @@ func (e *Engine) indexDelete(table *Table, idInt int64) error {
 	for _, index := range indexsMap {
 		switch index.Type {
 		case IndexType_IdMember:
-			_, err := e.redisClient.ZRem(index.NameKey, idInt).Result()
+			_, err := ixe.engine.redisClient.ZRem(index.NameKey, idInt).Result()
 			if err != nil {
-				e.Printfln("indexDelete %s:%v,err:%v", index.NameKey, idInt, err)
+				ixe.engine.Printfln("Delete %s:%v,err:%v", index.NameKey, idInt, err)
 				return err
 			}
 		case IndexType_IdScore:
-			_, err := e.redisClient.ZRemRangeByScores(index.NameKey, ToString(idInt), ToString(idInt)).Result()
+			_, err := ixe.engine.redisClient.ZRemRangeByScores(index.NameKey, ToString(idInt), ToString(idInt)).Result()
 			if err != nil {
-				e.Printfln("indexDelete ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(idInt), err)
+				ixe.engine.Printfln("Delete ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(idInt), err)
 				return err
 			}
 		case IndexType_UnSupport:
-			e.Printfln("indexDelete unsupport index type")
+			ixe.engine.Printfln("Delete unsupport index type")
 		}
 	}
 	return nil
@@ -167,7 +176,7 @@ func ColsIsExistIndex(index *Index, cols ...string) bool {
 }
 
 //当前数据是否已经存在，存在则返回主键ID，唯一索引的才需要判断是否存在！
-func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Value, cols ...string) (int64, error) {
+func (ixe *IndexEngine) IsExistData(table *Table, beanValue, reflectVal reflect.Value, cols ...string) (int64, error) {
 	typ := reflectVal.Type()
 	_, has := typ.FieldByName(table.PrimaryKey)
 	if !has {
@@ -189,7 +198,7 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 		switch index.Type {
 		case IndexType_IdMember:
 			if !index.IsUnique && index.NameKey != table.GetIndexKey(table.PrimaryKey) {
-				e.Printfln("!index.IsUnique break")
+				ixe.engine.Printfln("!index.IsUnique break")
 				break
 			}
 			if len(index.IndexColumn) > 2 {
@@ -233,9 +242,9 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 				Offset: 0,
 				Count:  1,
 			}
-			val, err := e.redisClient.ZRangeByScore(index.NameKey, zRangeBy).Result()
+			val, err := ixe.engine.redisClient.ZRangeByScore(index.NameKey, zRangeBy).Result()
 			if err != nil {
-				e.Printfln("indexIsExistData ZRangeByScore%s:%v,err:%v", index.NameKey, score, err)
+				ixe.engine.Printfln("IsExistData ZRangeByScore%s:%v,err:%v", index.NameKey, score, err)
 				return 0, err
 			} else if len(val) > 0 {
 				var pkOldId int64
@@ -252,26 +261,26 @@ func (e *Engine) indexIsExistData(table *Table, beanValue, reflectVal reflect.Va
 				}
 			}
 			//log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
-			pkOldId, err := e.redisClient.ZScore(index.NameKey, strings.Join(members, "&")).Result()
+			pkOldId, err := ixe.engine.redisClient.ZScore(index.NameKey, strings.Join(members, "&")).Result()
 			if err != nil && err.Error() != "redis: nil" {
-				e.Printfln("indexIsExistData %s:%v,err:%v", index.NameKey, strings.Join(members, "&"), err)
+				ixe.engine.Printfln("IsExistData %s:%v,err:%v", index.NameKey, strings.Join(members, "&"), err)
 				return 0, err
 			} else {
-				e.Printfln("ZScore(%s,%s) pkOldId:%d", index.NameKey, strings.Join(members, "&"), int64(pkOldId))
+				ixe.engine.Printfln("ZScore(%s,%s) pkOldId:%d", index.NameKey, strings.Join(members, "&"), int64(pkOldId))
 				if int64(pkOldId) > 0 {
 					return int64(pkOldId), nil
 				}
 			}
 		case IndexType_UnSupport:
-			e.Printfln("indexIsExistData unsupport index type")
+			ixe.engine.Printfln("IsExistData unsupport index type")
 		}
 	}
 	return 0, nil
 }
 
 //todo: no thread safety! watch?
-func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, cols ...string) error {
-	e.Printfln("indexUpdate:%s,%v", table.Name, table.IndexesMap)
+func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value, cols ...string) error {
+	ixe.engine.Printfln("Update:%s,%v", table.Name, table.IndexesMap)
 	typ := reflectVal.Type()
 	_, has := typ.FieldByName(table.PrimaryKey)
 	if !has {
@@ -285,7 +294,7 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 	for _, index := range indexsMap {
 		if len(cols) > 0 {
 			if !ColsIsExistIndex(index, cols...) {
-				e.Printfln("indexUpdate ColsIsExistIndex:%v,cols:%v", index.IndexColumn, cols)
+				ixe.engine.Printfln("Update ColsIsExistIndex:%v,cols:%v", index.IndexColumn, cols)
 				continue
 			}
 		}
@@ -335,16 +344,16 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 				Member: pkFieldValue.Int(),
 				Score:  float64(score), //todo:浮点数有诡异问题
 			}
-			_, err := e.redisClient.ZAdd(index.NameKey, redisZ).Result()
+			_, err := ixe.engine.redisClient.ZAdd(index.NameKey, redisZ).Result()
 			if err != nil {
-				e.Printfln("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
+				ixe.engine.Printfln("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
 				return err
 			}
 		case IndexType_IdScore:
 			//remove old index
-			_, err := e.redisClient.ZRemRangeByScores(index.NameKey, ToString(pkFieldValue.Int()), ToString(pkFieldValue.Int())).Result()
+			_, err := ixe.engine.redisClient.ZRemRangeByScores(index.NameKey, ToString(pkFieldValue.Int()), ToString(pkFieldValue.Int())).Result()
 			if err != nil {
-				e.Printfln("IndexUpdate ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(pkFieldValue.Int()), err)
+				ixe.engine.Printfln("IndexUpdate ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(pkFieldValue.Int()), err)
 				return err
 			}
 			var members []string
@@ -357,34 +366,35 @@ func (e *Engine) indexUpdate(table *Table, beanValue, reflectVal reflect.Value, 
 				Member: strings.Join(members, "&"),
 				Score:  float64(pkFieldValue.Int()),
 			}
-			_, err = e.redisClient.ZAdd(index.NameKey, redisZ).Result()
+			_, err = ixe.engine.redisClient.ZAdd(index.NameKey, redisZ).Result()
 			if err != nil {
-				e.Printfln("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
+				ixe.engine.Printfln("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
 				return err
 			}
 		case IndexType_UnSupport:
-			e.Printfln("IndexUpdate unsupport index type")
+			ixe.engine.Printfln("IndexUpdate unsupport index type")
 		}
 	}
 	return nil
 }
 
-func (e *Engine) IndexReBuild(bean interface{}) error {
+func (ixe *IndexEngine) ReBuild(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
-	table, err := e.GetTable(beanValue, reflectVal)
-	if err != nil {
-		return err
+
+	table, has := ixe.engine.GetTableByName(ixe.engine.TableName(reflectVal))
+	if !has {
+		return ERR_UnKnowTable
 	}
 
-	e.indexDrop(table, table.PrimaryKey)
+	ixe.Drop(table, table.PrimaryKey)
 
 	var offset int64 = 0
 	var limit int64 = 100
 
 	searchCon := NewSearchCondition(IndexType_IdMember, ScoreMin, ScoreMax, table.PrimaryKey)
 	for {
-		idAry, err := e.indexRange(table, searchCon, offset, limit)
+		idAry, err := ixe.Range(table, searchCon, offset, limit)
 		if err != nil {
 			return err
 		}
@@ -401,7 +411,7 @@ func (e *Engine) IndexReBuild(bean interface{}) error {
 				fields = append(fields, fieldName)
 			}
 		}
-		valAry, err := e.redisClient.HMGet(table.GetTableKey(), fields...).Result()
+		valAry, err := ixe.engine.redisClient.HMGet(table.GetTableKey(), fields...).Result()
 		if err != nil {
 			return err
 		} else if valAry == nil {
@@ -424,9 +434,9 @@ func (e *Engine) IndexReBuild(bean interface{}) error {
 				colValue := reflectElemVal.FieldByName(colName)
 				SetValue(valAry[i+j], &colValue)
 			}
-			err = e.indexUpdate(table, newBeanValue, reflect.Indirect(newBeanValue))
+			err = ixe.Update(table, newBeanValue, reflect.Indirect(newBeanValue))
 			if err != nil {
-				e.Printfln("indexReBuild indexUpdate(%v) err:%v", newBeanValue, err)
+				ixe.engine.Printfln("indexReBuild Update(%v) err:%v", newBeanValue, err)
 			}
 		}
 		if len(idAry) < int(limit) {
@@ -436,7 +446,7 @@ func (e *Engine) IndexReBuild(bean interface{}) error {
 	return nil
 }
 
-func (e *Engine) indexDrop(table *Table, except ...string) error {
+func (ixe *IndexEngine) Drop(table *Table, except ...string) error {
 	indexsMap := table.IndexesMap
 	var keys []string
 	for _, index := range indexsMap {
@@ -454,7 +464,7 @@ func (e *Engine) indexDrop(table *Table, except ...string) error {
 		}
 	}
 	if len(keys) > 0 {
-		_, err := e.redisClient.Del(keys...).Result()
+		_, err := ixe.engine.redisClient.Del(keys...).Result()
 		return err
 	}
 	return nil

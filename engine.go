@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	)
+)
 
 //type ORM interface {
 //	Insert()
@@ -39,6 +39,9 @@ type Engine struct {
 
 	showExecTime bool
 	TZLocation   *time.Location // The timezone of the application
+
+	Schema *SchemaEngine
+	Index  *IndexEngine
 }
 
 func NewEngine(redisCli *redis.Client) *Engine {
@@ -51,15 +54,12 @@ func NewEngine(redisCli *redis.Client) *Engine {
 		isShowLog:   false,
 	}
 	redisCliProxy.engine = engine
-	//tables, err := engine.ReloadTables()
-	//if err != nil {
-	//	engine.Printfln("ReloadTables err:%v", err)
-	//}
-	//if len(tables) > 0 {
-	//	for _, table := range tables {
-	//		engine.Tables[table.Name] = table
-	//	}
-	//}
+
+	schema := NewSchemaEngine(engine)
+	engine.Schema = schema
+
+	index := NewIndexEngine(engine)
+	engine.Index = index
 	return engine
 }
 func (e *Engine) IsShowLog(isShow bool) {
@@ -75,10 +75,19 @@ func (e *Engine) Printfln(format string, a ...interface{}) {
 //todo: command->redis client
 func (e *Engine) Printf(format string, a ...interface{}) {
 	if e.isShowLog {
-		fmt.Printf(fmt.Sprintf("[redis_orm %s]:%s", time.Now().Format("06-01-02 15:04:05"), format), a...)
+		fmt.Printf(fmt.Sprintf("[redis_orm %s] : %s", time.Now().Format("06-01-02 15:04:05"), format), a...)
 	}
 }
-func (e *Engine) GetTable(beanValue, beanIndirectValue reflect.Value) (*Table, error) {
+func (e *Engine) GetTableByName(tableName string) (*Table, bool) {
+	e.tablesMutex.RLock()
+	defer e.tablesMutex.RUnlock()
+	table, has := e.Tables[tableName]
+	if !has {
+		e.Printfln("GetTableByName(%s) !has", tableName)
+	}
+	return table, has
+}
+func (e *Engine) GetTableByReflect(beanValue, beanIndirectValue reflect.Value) (*Table, error) {
 	if beanValue.Kind() != reflect.Ptr {
 		return nil, Err_NeedPointer
 	} else if beanValue.Elem().Kind() == reflect.Ptr {
@@ -88,10 +97,10 @@ func (e *Engine) GetTable(beanValue, beanIndirectValue reflect.Value) (*Table, e
 	if beanValue.Elem().Kind() == reflect.Struct ||
 		beanValue.Elem().Kind() == reflect.Interface {
 		e.tablesMutex.RLock()
-		table, ok := e.Tables[e.tbName(beanIndirectValue)]
+		table, ok := e.Tables[e.TableName(beanIndirectValue)]
 		e.tablesMutex.RUnlock()
 		if !ok {
-			if strings.Contains(NeedMapTable, e.tbName(beanIndirectValue)) {
+			if strings.Contains(NeedMapTable, e.TableName(beanIndirectValue)) {
 				var err error
 				table, err = e.mapTable(beanIndirectValue)
 				if err != nil {
@@ -101,7 +110,7 @@ func (e *Engine) GetTable(beanValue, beanIndirectValue reflect.Value) (*Table, e
 				e.Tables[table.Name] = table
 				e.tablesMutex.Unlock()
 			} else {
-				e.Printfln("table:%s, not found", e.tbName(beanIndirectValue))
+				e.Printfln("table:%s, not found", e.TableName(beanIndirectValue))
 				return nil, ERR_UnKnowTable
 			}
 		}
@@ -117,7 +126,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 	typ := v.Type()
 	table := NewEmptyTable()
 	//table.Type = typ
-	table.Name = strings.ToLower(e.tbName(v))
+	table.Name = strings.ToLower(e.TableName(v))
 	//ptr or struct:typ.NumField()
 	for i := 0; i < typ.NumField(); i++ {
 		tag := typ.Field(i).Tag
@@ -180,7 +189,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 					//abondon
 				}
 			}
-			col.Type = fieldType
+			//col.Type = fieldType
 			table.AddColumn(col)
 			if isIndex {
 				table.AddIndex(fieldType, indexName, col.Name, col.Comment, isUnique)
@@ -213,7 +222,7 @@ func splitTag(tag string) (tags []string) {
 	}
 	return
 }
-func (e *Engine) tbName(v reflect.Value) string {
+func (e *Engine) TableName(v reflect.Value) string {
 	return strings.ToLower(v.Type().Name())
 }
 

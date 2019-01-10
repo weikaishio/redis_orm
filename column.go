@@ -1,9 +1,5 @@
 package redis_orm
 
-import (
-	"reflect"
-)
-
 type SchemaColumnsTb struct {
 	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
 	TableId       int64  `redis_orm:"index comment '表ID'"`
@@ -21,7 +17,7 @@ func SchemaColumnsFromColumn(tableId int64, v *Column) *SchemaColumnsTb {
 		ColumnName:    v.Name,
 		ColumnComment: v.Comment,
 		DefaultValue:  v.DefaultValue,
-		DataType:      v.Type.Kind().String(),
+		//DataType:      v.Type.Kind().String(),
 	}
 }
 
@@ -37,7 +33,7 @@ type Column struct {
 	//EnumOptions     map[string]int
 	//SetOptions      map[string]int
 	Comment         string
-	Type            reflect.Type //only support base type
+	//Type            reflect.Type //only support base type
 }
 
 func ColumnFromSchemaColumns(v *SchemaColumnsTb,schemaTable *SchemaTablesTb) *Column {

@@ -6,8 +6,8 @@ import (
 	"github.com/mkideal/log"
 	"github.com/weikaishio/redis_orm"
 	"github.com/weikaishio/redis_orm/test/models"
+	"strings"
 	"testing"
-	"time"
 )
 
 var (
@@ -16,6 +16,7 @@ var (
 
 //test and log?
 func init() {
+	log.SetLevelFromString("TRACE")
 	options := redis.Options{
 		Addr:     "127.0.0.1:6379",
 		Password: "",
@@ -26,9 +27,10 @@ func init() {
 
 	engine = redis_orm.NewEngine(redisClient)
 	engine.IsShowLog(true)
-	engine.ReloadTables()
-
-	log.SetLevelFromString("TRACE")
+	_, err := engine.Schema.ReloadTables()
+	if err != nil {
+		engine.Printfln("ReloadTables err:%v", err)
+	}
 }
 
 //func TestEngine_GetTable(t *testing.T) {
@@ -50,33 +52,33 @@ func init() {
 //}
 
 func TestEngine_Insert(t *testing.T) {
-	//engine.TableDrop(&redis_orm.SchemaTablesTb{})
-	//engine.TableDrop(&redis_orm.SchemaColumnsTb{})
-	//engine.TableDrop(&redis_orm.SchemaIndexsTb{})
+	//engine.Schema.TableDrop(&redis_orm.SchemaTablesTb{})
+	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
+	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
 	//t.Logf("tables:%v", engine.Tables)
 	//engine.TableTruncate(&models.Faq{})
-	//for _, table := range engine.Tables {
-	//	if strings.Contains(redis_orm.NeedMapTable, table.Name) {
-	//		continue
-	//	}
-	//	t.Logf("table:%v", *table)
-	//	for key, column := range table.ColumnsMap {
-	//		t.Logf("column:%s,%v", key, column)
-	//	}
-	//	for key, index := range table.IndexesMap {
-	//		t.Logf("index:%s,%v", key, index)
-	//	}
-	//}
+	for _, table := range engine.Tables {
+		if strings.Contains(redis_orm.NeedMapTable, table.Name) {
+			continue
+		}
+		t.Logf("table:%v", *table)
+		for key, column := range table.ColumnsMap {
+			t.Logf("column:%s,%v", key, column)
+		}
+		for key, index := range table.IndexesMap {
+			t.Logf("index:%s,%v", key, index)
+		}
+	}
 	ary := make([]interface{}, 0)
 	faq := &models.Faq{
-		Title:  "index3",
-		Unique: 1547020513,
+		Title:  "index311",
+		Unique: 1212122,
 		Hearts: 1,
 	}
 	ary = append(ary, faq)
 	faq = &models.Faq{
-		Title:  "index8",
-		Unique: time.Now().Unix(),
+		Title:  "index811",
+		Unique: 156122,
 		Hearts: 2,
 	}
 	ary = append(ary, faq)
@@ -85,16 +87,15 @@ func TestEngine_Insert(t *testing.T) {
 	t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
 }
 
-//
 //func TestEngine_CreateTable(t *testing.T) {
 //	faq := &models.Faq{}
 //	//engine.TableDrop(faq)
-//	err := engine.CreateTable(faq)
+//	err := engine.Schema.CreateTable(faq)
 //	t.Logf("CreateTable(%v),err:%v", faq, err)
 //}
-
+//
 //func TestEngine_ReloadTables(t *testing.T) {
-//	tables, err := engine.ReloadTables()
+//	tables, err := engine.Schema.ReloadTables()
 //	if err == nil {
 //		for _, table := range tables {
 //			t.Logf("table:%v", *table)
@@ -131,24 +132,23 @@ func TestEngine_Find(t *testing.T) {
 	//engine.IndexReBuild(models.Faq{})
 	var faqAry []*models.Faq
 	count, err := engine.Find(0, 30, redis_orm.NewSearchConditionV2(
-		"1&index8",
-		"index3",
-		"Type",
-		"Title",
+		1,
+		1,
+		"Hearts",
 	), &faqAry)
 	bys, _ := json.Marshal(faqAry)
 	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
 
 }
 
-//func TestEngine_Update(t *testing.T) {
-//	faq := &models.Faq{
-//		Id:    1,
-//		Title: "test51",
-//	}
-//	err := engine.Update(faq, "Title")
-//	t.Logf("TestEngine_Update err:%v", err)
-//}
+func TestEngine_Update(t *testing.T) {
+	faq := &models.Faq{
+		Id:    5,
+		Title: "test55",
+	}
+	err := engine.Update(faq, "Title")
+	t.Logf("TestEngine_Update err:%v", err)
+}
 
 //func TestEngine_UpdateMulti(t *testing.T) {
 //	faq := &models.Faq{
@@ -172,16 +172,16 @@ func TestEngine_Find(t *testing.T) {
 //	t.Logf("Delete faq:%v, err:%v", faq, err)
 //}
 //
-//func TestEngine_TableDrop(t *testing.T){
-//	faq:=&models.Faq{}
-//	err:=engine.TableDrop(faq)
+//func TestEngine_TableDrop(t *testing.T) {
+//	faq := &models.Faq{}
+//	err := engine.Schema.TableDrop(faq)
 //	t.Logf("TestEngine_TableDrop err:%v", err)
 //}
-//func TestEngine_DeleteMulti(t *testing.T){
+//func TestEngine_DeleteMulti(t *testing.T) {
 //	faq := &models.Faq{
 //		Title: "test51",
 //	}
-//	affectedRow, err := engine.DeleteMulti(faq, redis_orm.NewSearchCondition(
+//	affectedRow, err := engine.DeleteByCondition(faq, redis_orm.NewSearchCondition(
 //		redis_orm.IndexType_IdScore,
 //		"1",
 //		"4",

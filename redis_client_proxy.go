@@ -19,17 +19,17 @@ func (c *RedisClientProxy) HMSet(key string, fields map[string]interface{}) *red
 		return &redis.StatusCmd{}
 	}
 	val := c.redisClient.HMSet(key, fields)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) HIncrby(key string, field string, intVal int64) *redis.IntCmd {
 	val := c.redisClient.HIncrBy(key, field, intVal)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) HIncrbyFloat(key string, field string, intVal float64) *redis.FloatCmd {
 	val := c.redisClient.HIncrByFloat(key, field, intVal)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) HMGet(key string, fields ...string) *redis.SliceCmd {
@@ -37,12 +37,12 @@ func (c *RedisClientProxy) HMGet(key string, fields ...string) *redis.SliceCmd {
 		return &redis.SliceCmd{}
 	}
 	val := c.redisClient.HMGet(key, fields...)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) HIncrBy(key, field string, incr int64) *redis.IntCmd {
 	val := c.redisClient.HIncrBy(key, field, incr)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) HDel(key string, fields ...string) *redis.IntCmd {
@@ -50,7 +50,7 @@ func (c *RedisClientProxy) HDel(key string, fields ...string) *redis.IntCmd {
 		return &redis.IntCmd{}
 	}
 	val := c.redisClient.HDel(key, fields...)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) Del(keys ...string) *redis.IntCmd {
@@ -58,27 +58,27 @@ func (c *RedisClientProxy) Del(keys ...string) *redis.IntCmd {
 		return &redis.IntCmd{}
 	}
 	val := c.redisClient.Del(keys...)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) ZCount(key, min, max string) *redis.IntCmd {
 	val := c.redisClient.ZCount(key, min, max)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) ZScore(key, member string) *redis.FloatCmd {
 	val := c.redisClient.ZScore(key, member)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) ZRangeByScore(key string, opt redis.ZRangeBy) *redis.StringSliceCmd {
 	val := c.redisClient.ZRangeByScore(key, opt)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) ZRevRangeByScore(key string, opt redis.ZRangeBy) *redis.StringSliceCmd {
 	val := c.redisClient.ZRevRangeByScore(key, opt)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) ZRem(key string, members ...interface{}) *redis.IntCmd {
@@ -86,12 +86,12 @@ func (c *RedisClientProxy) ZRem(key string, members ...interface{}) *redis.IntCm
 		return &redis.IntCmd{}
 	}
 	val := c.redisClient.ZRem(key, members...)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) ZRemRangeByScores(key string, min, max string) *redis.IntCmd {
 	val := c.redisClient.ZRemRangeByScore(key, min, max)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) ZAdd(key string, members ...redis.Z) *redis.IntCmd {
@@ -99,7 +99,7 @@ func (c *RedisClientProxy) ZAdd(key string, members ...redis.Z) *redis.IntCmd {
 		return &redis.IntCmd{}
 	}
 	val := c.redisClient.ZAdd(key, members...)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
 func (c *RedisClientProxy) ZAddNX(key string, members ...redis.Z) *redis.IntCmd {
@@ -107,6 +107,6 @@ func (c *RedisClientProxy) ZAddNX(key string, members ...redis.Z) *redis.IntCmd 
 		return &redis.IntCmd{}
 	}
 	val := c.redisClient.ZAddNX(key, members...)
-	c.engine.Printfln("====redis command====\n%v", val.String())
+	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
