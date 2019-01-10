@@ -69,6 +69,7 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 		columnsTb := SchemaColumnsFromColumn(tablesTb.Id, v)
 		columnAry = append(columnAry, columnsTb)
 	}
+
 	affectedRows, err := s.InsertMulti(columnAry...)
 	if err != nil {
 		return err

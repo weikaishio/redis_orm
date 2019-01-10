@@ -54,7 +54,7 @@ func TestEngine_Insert(t *testing.T) {
 	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
 	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
 	//t.Logf("tables:%v", engine.Tables)
-	engine.TableTruncate(&models.FaqTb{})
+	//engine.TableTruncate(&models.FaqTb{})
 	for _, table := range engine.Tables {
 		if strings.Contains(redis_orm.NeedMapTable, table.Name) {
 			continue
@@ -69,14 +69,14 @@ func TestEngine_Insert(t *testing.T) {
 	}
 	ary := make([]interface{}, 0)
 	faq := &models.Faq{
-		Title:  "index311",
-		Unique: 1212122,
+		Title:  "index3",
+		Unique: 12121223,
 		Hearts: 1,
 	}
 	ary = append(ary, faq)
 	faq = &models.Faq{
-		Title:  "index811",
-		Unique: 156122,
+		Title:  "index8",
+		Unique: 1561223,
 		Hearts: 2,
 	}
 	ary = append(ary, faq)
@@ -87,11 +87,11 @@ func TestEngine_Insert(t *testing.T) {
 
 //func TestEngine_CreateTable(t *testing.T) {
 //	faq := &models.Faq{}
-//	//engine.TableDrop(faq)
+//	engine.Schema.TableDrop(faq)
 //	err := engine.Schema.CreateTable(faq)
 //	t.Logf("CreateTable(%v),err:%v", faq, err)
 //}
-//
+
 //func TestEngine_ReloadTables(t *testing.T) {
 //	tables, err := engine.Schema.ReloadTables()
 //	if err == nil {
@@ -131,8 +131,8 @@ func TestEngine_Find(t *testing.T) {
 	var faqAry []*models.Faq
 	count, err := engine.Find(0, 30, redis_orm.NewSearchConditionV2(
 		1,
-		1,
-		"Hearts",
+		10,
+		"Id",
 	), &faqAry)
 	bys, _ := json.Marshal(faqAry)
 	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
@@ -141,7 +141,7 @@ func TestEngine_Find(t *testing.T) {
 
 func TestEngine_Update(t *testing.T) {
 	faq := &models.Faq{
-		Id:    5,
+		Id:    1,
 		Title: "test55",
 	}
 	err := engine.Update(faq, "Title")

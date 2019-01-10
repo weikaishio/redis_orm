@@ -4,7 +4,7 @@ type SchemaColumnsTb struct {
 	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
 	TableId       int64  `redis_orm:"index comment '表ID'"`
 	ColumnName    string `redis_orm:"comment '字段名'"`
-	ColumnComment string `redis_orm:"dft '' index comment '字段注释'"`
+	ColumnComment string `redis_orm:"dft '' comment '字段注释'"`
 	DataType      string `redis_orm:"comment '数据类型'"`
 	DefaultValue  string `redis_orm:"comment '默认值'"`
 	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
