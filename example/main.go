@@ -46,7 +46,7 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("ReloadTables err:%v", err))
 	}
-	engine.SetSync2DB(mysqlOrm)
+	engine.SetSync2DB(mysqlOrm, 30)
 }
 func main() {
 	time.Sleep(time.Second)

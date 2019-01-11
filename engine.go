@@ -69,8 +69,8 @@ func NewEngine(redisCli *redis.Client) *Engine {
 	engine.Index = index
 	return engine
 }
-func (e *Engine) SetSync2DB(mysqlOrm *xorm.Engine) {
-	e.syncDB = sync2db.NewSync2DB(mysqlOrm, e.wait)
+func (e *Engine) SetSync2DB(mysqlOrm *xorm.Engine, lazyTimeSecond int) {
+	e.syncDB = sync2db.NewSync2DB(mysqlOrm, lazyTimeSecond, e.wait)
 	e.syncDB.IsShowLog(e.isShowLog)
 	e.isSync2DB = true
 	e.wait.Add(1)
