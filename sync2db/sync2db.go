@@ -20,12 +20,12 @@ type Sync2DB struct {
 func (s *Sync2DB) IsShowLog(isShow bool) {
 	s.isShowLog = isShow
 }
-func NewSync2DB(mysqlOrm *xorm.Engine, wait *sync.WaitGroup) *Sync2DB {
+func NewSync2DB(mysqlOrm *xorm.Engine, lazyTimeSecond int, wait *sync.WaitGroup) *Sync2DB {
 	sync2DB := &Sync2DB{
 		mysqlOrm: mysqlOrm,
 		wait:     wait,
 	}
-	sync2DB.LazyMysql = db_lazy.NewLazyMysql(mysqlOrm, 10)
+	sync2DB.LazyMysql = db_lazy.NewLazyMysql(mysqlOrm, lazyTimeSecond)
 	go func() {
 		go sync2DB.LazyMysql.Exec()
 		ListenQuitAndDump() //expose a quit method or listen kill process signal
