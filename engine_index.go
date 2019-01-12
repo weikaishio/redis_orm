@@ -17,6 +17,7 @@ func NewIndexEngine(e *Engine) *IndexEngine {
 		engine: e,
 	}
 }
+
 //Done:combined index
 func (ixe *IndexEngine) GetId(table *Table, searchCon *SearchCondition) (int64, error) {
 	index, ok := table.IndexesMap[strings.ToLower(searchCon.Name())]
@@ -46,7 +47,7 @@ func (ixe *IndexEngine) GetId(table *Table, searchCon *SearchCondition) (int64, 
 		}
 	case IndexType_IdScore:
 		res, err := ixe.engine.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
-		if err == nil || (err != nil && err.Error() == "redis: nil") {
+		if err == nil || (err != nil && err.Error() == redis.Nil.Error()) {
 			return int64(res), nil
 		} else {
 			ixe.engine.Printfln("GetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
@@ -73,7 +74,7 @@ func (ixe *IndexEngine) Count(table *Table, searchCon *SearchCondition) (count i
 	case IndexType_IdScore:
 		var res float64
 		res, err = ixe.engine.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
-		if err == nil || (err != nil && err.Error() == "redis: nil") {
+		if err == nil || (err != nil && err.Error() == redis.Nil.Error()) {
 			if err == nil && res > 0 {
 				count = 1
 			}
@@ -113,7 +114,7 @@ func (ixe *IndexEngine) Range(table *Table, searchCon *SearchCondition, offset, 
 	case IndexType_IdScore:
 		var res float64
 		res, err = ixe.engine.redisClient.ZScore(index.NameKey, ToString(searchCon.FieldMinValue)).Result()
-		if err == nil || (err != nil && err.Error() == "redis: nil") {
+		if err == nil || (err != nil && err.Error() == redis.Nil.Error()) {
 			idAry = append(idAry, ToString(res))
 		} else {
 			ixe.engine.Printfln("GetId ZScore(%s,%v) err:%v", index.NameKey, searchCon.FieldMinValue, err)
@@ -173,6 +174,18 @@ func ColsIsExistIndex(index *Index, cols ...string) bool {
 		}
 	}
 	return isExist
+}
+
+func (ixe *IndexEngine) IdIsExist(table *Table, pkId int64) (bool, error) {
+	fieldName := GetFieldName(pkId, table.PrimaryKey)
+	val, err := ixe.engine.redisClient.HGet(table.GetTableKey(), fieldName).Result()
+	if err != nil {
+		if err.Error() == redis.Nil.Error() {
+			return false, nil
+		}
+		return false, err
+	}
+	return val != "", nil
 }
 
 //当前数据是否已经存在，存在则返回主键ID，唯一索引的才需要判断是否存在！
@@ -262,7 +275,7 @@ func (ixe *IndexEngine) IsExistData(table *Table, beanValue, reflectVal reflect.
 			}
 			//log.Trace("IndexUpdate %s:%v", index.NameKey, redisZ)
 			pkOldId, err := ixe.engine.redisClient.ZScore(index.NameKey, strings.Join(members, "&")).Result()
-			if err != nil && err.Error() != "redis: nil" {
+			if err != nil && err.Error() != redis.Nil.Error() {
 				ixe.engine.Printfln("IsExistData %s:%v,err:%v", index.NameKey, strings.Join(members, "&"), err)
 				return 0, err
 			} else {

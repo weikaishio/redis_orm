@@ -5,8 +5,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/weikaishio/redis_orm"
 	"github.com/weikaishio/redis_orm/example/models"
-	"strings"
-	"testing"
+		"testing"
 	)
 
 var (
@@ -31,6 +30,13 @@ func init() {
 	}
 }
 
+//func TestEngine_CreateTable(t *testing.T) {
+//	faq := &models.Faq{}
+//	engine.Schema.TableDrop(faq)
+//	err := engine.Schema.CreateTable(faq)
+//	t.Logf("CreateTable(%v),err:%v", faq, err)
+//}
+
 //func TestEngine_GetTable(t *testing.T) {
 //	faq := &models.Faq{
 //		Title:   "为啥",
@@ -48,48 +54,42 @@ func init() {
 //	bys, _ := json.Marshal(faq)
 //	t.Logf("GetDefaultValue faq:%v,err:%v", string(bys), err)
 //}
-
-func TestEngine_Insert(t *testing.T) {
-	//engine.Schema.TableDrop(&redis_orm.SchemaTablesTb{})
-	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
-	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
-	//t.Logf("tables:%v", engine.Tables)
-	//engine.TableTruncate(&models.FaqTb{})
-	for _, table := range engine.Tables {
-		if strings.Contains(redis_orm.NeedMapTable, table.Name) {
-			continue
-		}
-		t.Logf("table:%v", *table)
-		for key, column := range table.ColumnsMap {
-			t.Logf("column:%s,%v", key, column)
-		}
-		for key, index := range table.IndexesMap {
-			t.Logf("index:%s,%v", key, index)
-		}
-	}
-	ary := make([]interface{}, 0)
-	faq := &models.Faq{
-		Title:  "index3",
-		Unique: 12121223,
-		Hearts: 1,
-	}
-	ary = append(ary, faq)
-	faq = &models.Faq{
-		Title:  "index8",
-		Unique: 1561223,
-		Hearts: 2,
-	}
-	ary = append(ary, faq)
-	affected, err := engine.InsertMulti(ary...)
-	bys, _ := json.Marshal(faq)
-	t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
-}
-
-//func TestEngine_CreateTable(t *testing.T) {
-//	faq := &models.Faq{}
-//	engine.Schema.TableDrop(faq)
-//	err := engine.Schema.CreateTable(faq)
-//	t.Logf("CreateTable(%v),err:%v", faq, err)
+//
+//func TestEngine_Insert(t *testing.T) {
+//	//engine.Schema.TableDrop(&redis_orm.SchemaTablesTb{})
+//	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
+//	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
+//	//t.Logf("tables:%v", engine.Tables)
+//	//engine.TableTruncate(&models.FaqTb{})
+//	for _, table := range engine.Tables {
+//		if strings.Contains(redis_orm.NeedMapTable, table.Name) {
+//			continue
+//		}
+//		t.Logf("table:%v", *table)
+//		for key, column := range table.ColumnsMap {
+//			t.Logf("column:%s,%v", key, column)
+//		}
+//		for key, index := range table.IndexesMap {
+//			t.Logf("index:%s,%v", key, index)
+//		}
+//	}
+//	ary := make([]interface{}, 0)
+//	faq := &models.Faq{
+//		Title:  "index3",
+//		Unique: 12121223,
+//		Hearts: 1,
+//	}
+//	engine.Schema.CreateTable(faq)
+//	ary = append(ary, faq)
+//	faq = &models.Faq{
+//		Title:  "index8",
+//		Unique: 1561223,
+//		Hearts: 2,
+//	}
+//	ary = append(ary, faq)
+//	affected, err := engine.InsertMulti(ary...)
+//	bys, _ := json.Marshal(faq)
+//	t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
 //}
 
 //func TestEngine_ReloadTables(t *testing.T) {
@@ -103,14 +103,14 @@ func TestEngine_Insert(t *testing.T) {
 //	}
 //}
 
-//func TestEngine_Get(t *testing.T) {
-//	faq := &models.Faq{
-//		Id: 2,
-//	}
-//	has, err := engine.Get(faq)
-//	bys, _ := json.Marshal(faq)
-//	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
-//}
+func TestEngine_Get(t *testing.T) {
+	faq := &models.Faq{
+		Id: 6,
+	}
+	has, err := engine.Get(faq)
+	bys, _ := json.Marshal(faq)
+	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
+}
 
 //func TestEngine_GetByCombinedIndex(t *testing.T) {
 //	faq := &models.Faq{}
@@ -162,13 +162,13 @@ func TestEngine_Update(t *testing.T) {
 //	t.Logf("TestEneine_UpdateMulti affectedRow:%d,err:%v", affectedRow, err)
 //}
 
-//func TestEngine_Delete(t *testing.T) {
-//	faq := &models.Faq{
-//		Id: 1,
-//	}
-//	err := engine.Delete(faq)
-//	t.Logf("Delete faq:%v, err:%v", faq, err)
-//}
+func TestEngine_Delete(t *testing.T) {
+	faq := &models.Faq{
+		Id: 6,
+	}
+	err := engine.Delete(faq)
+	t.Logf("Delete faq:%v, err:%v", faq, err)
+}
 //
 //func TestEngine_TableDrop(t *testing.T) {
 //	faq := &models.Faq{}

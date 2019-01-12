@@ -32,6 +32,11 @@ func (c *RedisClientProxy) HIncrbyFloat(key string, field string, intVal float64
 	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
+func (c *RedisClientProxy) HGet(key string, field string) *redis.StringCmd {
+	val := c.redisClient.HGet(key, field)
+	c.engine.Printfln("========redis command========\n%v", val.String())
+	return val
+}
 func (c *RedisClientProxy) HMGet(key string, fields ...string) *redis.SliceCmd {
 	if len(fields) == 0 {
 		return &redis.SliceCmd{}
@@ -42,6 +47,11 @@ func (c *RedisClientProxy) HMGet(key string, fields ...string) *redis.SliceCmd {
 }
 func (c *RedisClientProxy) HIncrBy(key, field string, incr int64) *redis.IntCmd {
 	val := c.redisClient.HIncrBy(key, field, incr)
+	c.engine.Printfln("========redis command========\n%v", val.String())
+	return val
+}
+func (c *RedisClientProxy) HIncrByFloat(key, field string, incr float64) *redis.FloatCmd {
+	val := c.redisClient.HIncrByFloat(key, field, incr)
 	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }

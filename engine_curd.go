@@ -72,17 +72,24 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 
 	pkInt := pkFieldValue.Int()
 
-	getId, err := e.Index.GetId(table, &SearchCondition{
-		SearchColumn: []string{table.PrimaryKey},
-		//IndexType:     IndexType_IdMember,
-		FieldMinValue: pkInt,
-		FieldMaxValue: pkInt,
-	})
+	//getId, err := e.Index.GetId(table, &SearchCondition{
+	//	SearchColumn: []string{table.PrimaryKey},
+	//	//IndexType:     IndexType_IdMember,
+	//	FieldMinValue: pkInt,
+	//	FieldMaxValue: pkInt,
+	//})
+	//if err != nil {
+	//	return false, err
+	//}
+	//if getId == 0 {
+	//	return false, nil
+	//}
+	has, err := e.Index.IdIsExist(table, pkInt)
 	if err != nil {
 		return false, err
 	}
-	if getId == 0 {
-		return false, nil
+	if !has {
+		return false, Err_DataNotAvailable
 	}
 
 	fields := make([]string, 0)
@@ -386,6 +393,14 @@ func (e *Engine) Insert(bean interface{}) error {
 		return ERR_UnKnowTable
 	}
 
+	pkOldId, err := e.Index.IsExistData(table, beanValue, reflectVal)
+	if err != nil {
+		return err
+	}
+	if pkOldId > 0 {
+		return Err_DataHadAvailable
+	}
+
 	for colName, col := range table.ColumnsMap {
 		colValue := reflectVal.FieldByName(colName)
 		if col.IsAutoIncrement || col.IsCombinedIndex || col.IsCreated || col.IsUpdated {
@@ -407,13 +422,6 @@ func (e *Engine) Insert(bean interface{}) error {
 		}
 	}
 
-	pkOldId, err := e.Index.IsExistData(table, beanValue, reflectVal)
-	if err != nil {
-		return err
-	}
-	if pkOldId > 0 {
-		return Err_DataHadAvailable
-	}
 	var lastId int64
 	if table.AutoIncrement != "" {
 		lastId, err = e.redisClient.HIncrBy(table.GetTableKey(), table.GetAutoIncrKey(), 1).Result()
@@ -608,20 +616,29 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 		return 0, Err_PrimaryKeyTypeInvalid
 	}
 
-	pkOldId, err := e.Index.IsExistData(table, beanValue, reflectVal, table.PrimaryKey)
+	pkInt := pkFieldValue.Int()
+	has, err := e.Index.IdIsExist(table, pkInt)
 	if err != nil {
 		return 0, err
 	}
-	if pkOldId == 0 {
+	if !has {
 		return 0, Err_DataNotAvailable
 	}
 
-	res, err := e.redisClient.HIncrBy(table.GetTableKey(), GetFieldName(pkOldId, col), val).Result()
+	//pkOldId, err := e.Index.IsExistData(table, beanValue, reflectVal, table.PrimaryKey)
+	//if err != nil {
+	//	return 0, err
+	//}
+	//if pkOldId == 0 {
+	//	return 0, Err_DataNotAvailable
+	//}
+
+	res, err := e.redisClient.HIncrBy(table.GetTableKey(), GetFieldName(pkInt, col), val).Result()
 	if err == nil {
 		if e.isSync2DB && table.IsSync2DB {
 			colValue := reflectVal.FieldByName(col)
 			colValue.SetInt(res)
-			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{col}, fmt.Sprintf("id=%d", pkOldId))
+			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{col}, fmt.Sprintf("id=%d", pkInt))
 		}
 	}
 	return res, err
@@ -807,19 +824,25 @@ func (e *Engine) Delete(bean interface{}) error {
 	}
 
 	pkInt := pkFieldValue.Int()
-
-	getId, err := e.Index.GetId(table, &SearchCondition{
-		SearchColumn: []string{table.PrimaryKey},
-		//IndexType:     IndexType_IdMember,
-		FieldMinValue: pkInt,
-		FieldMaxValue: pkInt,
-	})
+	has, err := e.Index.IdIsExist(table, pkInt)
 	if err != nil {
 		return err
 	}
-	if getId == 0 {
+	if !has {
 		return Err_DataNotAvailable
 	}
+	//getId, err := e.Index.GetId(table, &SearchCondition{
+	//	SearchColumn: []string{table.PrimaryKey},
+	//	//IndexType:     IndexType_IdMember,
+	//	FieldMinValue: pkInt,
+	//	FieldMaxValue: pkInt,
+	//})
+	//if err != nil {
+	//	return err
+	//}
+	//if getId == 0 {
+	//	return Err_DataNotAvailable
+	//}
 
 	fields := make([]string, 0)
 	for _, colName := range table.ColumnsSeq {
