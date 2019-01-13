@@ -30,7 +30,9 @@ func NewSync2DB(mysqlOrm *xorm.Engine, lazyTimeSecond int, wait *sync.WaitGroup)
 		go sync2DB.LazyMysql.Exec()
 		ListenQuitAndDump() //expose a quit method or listen kill process signal
 		sync2DB.LazyMysql.Quit()
-		sync2DB.wait.Done()
+		if sync2DB.wait!=nil {
+			sync2DB.wait.Done()
+		}
 	}()
 	return sync2DB
 }

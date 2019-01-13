@@ -95,8 +95,6 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 
 	if s.isSync2DB && table.IsSync2DB {
 		s.syncDB.Create2DB(bean)
-	} else {
-		s.Printfln("s.isSync2DB:%b, table.IsSync2DB:%b", s.isSync2DB, table.IsSync2DB)
 	}
 	return nil
 }

@@ -1,12 +1,11 @@
 package test
 
 import (
-	"encoding/json"
-	"github.com/go-redis/redis"
+		"github.com/go-redis/redis"
 	"github.com/weikaishio/redis_orm"
 	"github.com/weikaishio/redis_orm/example/models"
-		"testing"
-	)
+	"testing"
+)
 
 var (
 	engine *redis_orm.Engine
@@ -55,42 +54,44 @@ func init() {
 //	t.Logf("GetDefaultValue faq:%v,err:%v", string(bys), err)
 //}
 //
-//func TestEngine_Insert(t *testing.T) {
-//	//engine.Schema.TableDrop(&redis_orm.SchemaTablesTb{})
-//	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
-//	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
-//	//t.Logf("tables:%v", engine.Tables)
-//	//engine.TableTruncate(&models.FaqTb{})
-//	for _, table := range engine.Tables {
-//		if strings.Contains(redis_orm.NeedMapTable, table.Name) {
-//			continue
-//		}
-//		t.Logf("table:%v", *table)
-//		for key, column := range table.ColumnsMap {
-//			t.Logf("column:%s,%v", key, column)
-//		}
-//		for key, index := range table.IndexesMap {
-//			t.Logf("index:%s,%v", key, index)
-//		}
-//	}
-//	ary := make([]interface{}, 0)
-//	faq := &models.Faq{
-//		Title:  "index3",
-//		Unique: 12121223,
-//		Hearts: 1,
-//	}
-//	engine.Schema.CreateTable(faq)
-//	ary = append(ary, faq)
-//	faq = &models.Faq{
-//		Title:  "index8",
-//		Unique: 1561223,
-//		Hearts: 2,
-//	}
-//	ary = append(ary, faq)
-//	affected, err := engine.InsertMulti(ary...)
-//	bys, _ := json.Marshal(faq)
-//	t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
-//}
+func TestEngine_Insert(t *testing.T) {
+	//engine.Schema.TableDrop(&redis_orm.SchemaTablesTb{})
+	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
+	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
+	engine.Schema.TableDrop(models.Faq{})
+	engine.Schema.CreateTable(models.Faq{})
+	//	//t.Logf("tables:%v", engine.Tables)
+	//	//engine.TableTruncate(&models.FaqTb{})
+	//	for _, table := range engine.Tables {
+	//		if strings.Contains(redis_orm.NeedMapTable, table.Name) {
+	//			continue
+	//		}
+	//		t.Logf("table:%v", *table)
+	//		for key, column := range table.ColumnsMap {
+	//			t.Logf("column:%s,%v", key, column)
+	//		}
+	//		for key, index := range table.IndexesMap {
+	//			t.Logf("index:%s,%v", key, index)
+	//		}
+	//	}
+	//	ary := make([]interface{}, 0)
+	//	faq := &models.Faq{
+	//		Title:  "index3",
+	//		Unique: 12121223,
+	//		Hearts: 1,
+	//	}
+	//	engine.Schema.CreateTable(faq)
+	//	ary = append(ary, faq)
+	//	faq = &models.Faq{
+	//		Title:  "index8",
+	//		Unique: 1561223,
+	//		Hearts: 2,
+	//	}
+	//	ary = append(ary, faq)
+	//	affected, err := engine.InsertMulti(ary...)
+	//	bys, _ := json.Marshal(faq)
+	//	t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
+}
 
 //func TestEngine_ReloadTables(t *testing.T) {
 //	tables, err := engine.Schema.ReloadTables()
@@ -103,14 +104,14 @@ func init() {
 //	}
 //}
 
-func TestEngine_Get(t *testing.T) {
-	faq := &models.Faq{
-		Id: 6,
-	}
-	has, err := engine.Get(faq)
-	bys, _ := json.Marshal(faq)
-	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
-}
+//func TestEngine_Get(t *testing.T) {
+//	faq := &models.Faq{
+//		Id: 6,
+//	}
+//	has, err := engine.Get(faq)
+//	bys, _ := json.Marshal(faq)
+//	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
+//}
 
 //func TestEngine_GetByCombinedIndex(t *testing.T) {
 //	faq := &models.Faq{}
@@ -126,27 +127,27 @@ func TestEngine_Get(t *testing.T) {
 //	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
 //}
 
-func TestEngine_Find(t *testing.T) {
-	//engine.IndexReBuild(models.Faq{})
-	var faqAry []*models.Faq
-	count, err := engine.Find(0, 30, redis_orm.NewSearchConditionV2(
-		1,
-		10,
-		"Id",
-	), &faqAry)
-	bys, _ := json.Marshal(faqAry)
-	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
+//func TestEngine_Find(t *testing.T) {
+//	//engine.IndexReBuild(models.Faq{})
+//	var faqAry []*models.Faq
+//	count, err := engine.Find(0, 30, redis_orm.NewSearchConditionV2(
+//		1,
+//		10,
+//		"Id",
+//	), &faqAry)
+//	bys, _ := json.Marshal(faqAry)
+//	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
+//
+//}
 
-}
-
-func TestEngine_Update(t *testing.T) {
-	faq := &models.Faq{
-		Id:    1,
-		Title: "test55",
-	}
-	err := engine.Update(faq, "Title")
-	t.Logf("TestEngine_Update err:%v", err)
-}
+//func TestEngine_Update(t *testing.T) {
+//	faq := &models.Faq{
+//		Id:    1,
+//		Title: "test55",
+//	}
+//	err := engine.Update(faq, "Title")
+//	t.Logf("TestEngine_Update err:%v", err)
+//}
 
 //func TestEngine_UpdateMulti(t *testing.T) {
 //	faq := &models.Faq{
@@ -162,13 +163,14 @@ func TestEngine_Update(t *testing.T) {
 //	t.Logf("TestEneine_UpdateMulti affectedRow:%d,err:%v", affectedRow, err)
 //}
 
-func TestEngine_Delete(t *testing.T) {
-	faq := &models.Faq{
-		Id: 6,
-	}
-	err := engine.Delete(faq)
-	t.Logf("Delete faq:%v, err:%v", faq, err)
-}
+//func TestEngine_Delete(t *testing.T) {
+//	faq := &models.Faq{
+//		Id: 6,
+//	}
+//	err := engine.Delete(faq)
+//	t.Logf("Delete faq:%v, err:%v", faq, err)
+//}
+
 //
 //func TestEngine_TableDrop(t *testing.T) {
 //	faq := &models.Faq{}

@@ -25,14 +25,19 @@ import (
 自增
 默认值
 
-todo:session for thread safe
-
 todo:链式查询
 
 todo:权限控制~
 
 */
-
+/*
+todo:concurrency safe
+并发的处理
+1、唯一值的写入
+解决方案：
+2、自增（HIncrBy,HIncrByFloat）的原子可靠性
+3、CAS
+*/
 type Engine struct {
 	redisClient *RedisClientProxy
 	Tables      map[string]*Table
@@ -156,6 +161,9 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 
 		if rdsTagStr != "" {
 			col = NewEmptyColumn(typ.Field(i).Name)
+			col.Seq = byte(i)
+			col.DataType = fieldType.Kind().String()
+			e.Printfln("col.DataType:%s", col.DataType)
 			tags := splitTag(rdsTagStr)
 			var (
 				isIndex   bool
@@ -212,7 +220,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 			//col.Type = fieldType
 			table.AddColumn(col)
 			if isIndex {
-				table.AddIndex(fieldType, indexName, col.Name, col.Comment, isUnique)
+				table.AddIndex(fieldType, indexName, col.Name, col.Comment, isUnique, col.Seq)
 			}
 		} else {
 			e.Printfln("MapTable field:%s, not has tag", typ.Field(i).Name)

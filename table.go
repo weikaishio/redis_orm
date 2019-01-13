@@ -28,7 +28,7 @@ ORDER BY table_name;
 type SchemaTablesTb struct {
 	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
 	TableName     string `redis_orm:"unique comment '唯一'"`
-	TableComment  string `redis_orm:"dft '' index comment '表注释'"` //暂时没用上
+	TableComment  string `redis_orm:"dft '' comment '表注释'"` //暂时没用上
 	PrimaryKey    string `redis_orm:"comment '主键字段'"`
 	AutoIncrement string `redis_orm:"comment '自增字段'"`
 	IsSync2DB     bool   `redis_orm:"comment '是否同步到数据库'"`
@@ -97,7 +97,7 @@ func (table *Table) GetAutoIncrKey() string {
 func (table *Table) GetTableKey() string {
 	return fmt.Sprintf("%s%s", KeyTbPrefix, strings.ToLower(table.Name))
 }
-func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName, comment string, isUnique bool) {
+func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName, comment string, isUnique bool, seq byte) {
 	var indexType IndexType
 	switch typ.Kind() {
 	case reflect.String:
@@ -126,6 +126,7 @@ func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName, comment 
 	}
 	index := &Index{
 		NameKey:     table.GetIndexKey(columnName),
+		Seq:         seq,
 		IndexColumn: strings.Split(indexColumn, "&"),
 		Comment:     comment,
 		Type:        indexType,

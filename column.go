@@ -3,8 +3,9 @@ package redis_orm
 type SchemaColumnsTb struct {
 	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
 	TableId       int64  `redis_orm:"index comment '表ID'"`
-	ColumnName    string `redis_orm:"comment '字段名'"`
-	ColumnComment string `redis_orm:"dft '' comment '字段注释'"`
+	Seq           byte   `redis_orm:"comment '列顺序'"`
+	ColumnName    string `redis_orm:"comment '列名'"`
+	ColumnComment string `redis_orm:"dft '' comment '列注释'"`
 	DataType      string `redis_orm:"comment '数据类型'"`
 	DefaultValue  string `redis_orm:"comment '默认值'"`
 	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
@@ -13,15 +14,17 @@ type SchemaColumnsTb struct {
 
 func SchemaColumnsFromColumn(tableId int64, v *Column) *SchemaColumnsTb {
 	return &SchemaColumnsTb{
+		Seq:           v.Seq,
 		TableId:       tableId,
 		ColumnName:    v.Name,
 		ColumnComment: v.Comment,
 		DefaultValue:  v.DefaultValue,
-		//DataType:      v.Type.Kind().String(),
+		DataType:      v.DataType,
 	}
 }
 
 type Column struct {
+	Seq             byte
 	Name            string
 	DefaultValue    string
 	IsPrimaryKey    bool
@@ -32,28 +35,31 @@ type Column struct {
 	//IsCascade       bool
 	//EnumOptions     map[string]int
 	//SetOptions      map[string]int
-	Comment         string
+	Comment  string
+	DataType string
 	//Type            reflect.Type //only support base type
 }
 
-func ColumnFromSchemaColumns(v *SchemaColumnsTb,schemaTable *SchemaTablesTb) *Column {
-	column:= &Column{
+func ColumnFromSchemaColumns(v *SchemaColumnsTb, schemaTable *SchemaTablesTb) *Column {
+	column := &Column{
+		Seq:          v.Seq,
 		Name:         v.ColumnName,
 		Comment:      v.ColumnComment,
 		DefaultValue: v.DefaultValue,
+		DataType:     v.DataType,
 		//Type:reflect.Type() todo:type的支持
 	}
-	if schemaTable.PrimaryKey==v.ColumnName {
-		column.IsPrimaryKey=true
+	if schemaTable.PrimaryKey == v.ColumnName {
+		column.IsPrimaryKey = true
 	}
-	if schemaTable.AutoIncrement==v.ColumnName {
-		column.IsAutoIncrement=true
+	if schemaTable.AutoIncrement == v.ColumnName {
+		column.IsAutoIncrement = true
 	}
-	if schemaTable.Created==v.ColumnName {
-		column.IsCreated=true
+	if schemaTable.Created == v.ColumnName {
+		column.IsCreated = true
 	}
-	if schemaTable.Updated==v.ColumnName {
-		column.IsUpdated=true
+	if schemaTable.Updated == v.ColumnName {
+		column.IsUpdated = true
 	}
 	return column
 }

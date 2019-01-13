@@ -13,6 +13,7 @@ const (
 type SchemaIndexsTb struct {
 	Id           int64  `redis_orm:"pk autoincr comment 'ID'"`
 	TableId      int64  `redis_orm:"index comment '表ID'"`
+	Seq          byte   `redis_orm:"comment '索引顺序'"`
 	IndexName    string `redis_orm:"comment '索引名'"`
 	IndexComment string `redis_orm:"dft '' comment '索引注释'"`
 	IndexColumn  string `redis_orm:"comment '索引字段，&分割'"`
@@ -25,6 +26,7 @@ type SchemaIndexsTb struct {
 func SchemaIndexsFromColumn(tableId int64, v *Index) *SchemaIndexsTb {
 	return &SchemaIndexsTb{
 		TableId:      tableId,
+		Seq:          v.Seq,
 		IndexName:    v.NameKey,
 		IndexComment: v.Comment,
 		IndexColumn:  strings.Join(v.IndexColumn, "&"),
@@ -34,6 +36,7 @@ func SchemaIndexsFromColumn(tableId int64, v *Index) *SchemaIndexsTb {
 }
 
 type Index struct {
+	Seq         byte
 	NameKey     string
 	IndexColumn []string
 	Comment     string
@@ -44,6 +47,7 @@ type Index struct {
 func IndexFromSchemaIndexs(v *SchemaIndexsTb) *Index {
 	column := &Index{
 		NameKey:     v.IndexName,
+		Seq:         v.Seq,
 		Comment:     v.IndexComment,
 		IndexColumn: strings.Split(v.IndexColumn, "&"),
 		IsUnique:    v.IsUnique,
