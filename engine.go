@@ -67,11 +67,13 @@ func NewEngine(redisCli *redis.Client) *Engine {
 	}
 	redisCliProxy.engine = engine
 
+	index := NewIndexEngine(engine)
+	engine.Index = index
+
 	schema := NewSchemaEngine(engine)
 	engine.Schema = schema
 
-	index := NewIndexEngine(engine)
-	engine.Index = index
+	engine.Schema.ReloadTables()
 	return engine
 }
 func (e *Engine) SetSync2DB(mysqlOrm *xorm.Engine, lazyTimeSecond int) {
