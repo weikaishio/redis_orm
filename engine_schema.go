@@ -34,6 +34,7 @@ func NewSchemaEngine(e *Engine) *SchemaEngine {
 		beanIndirectValue := reflect.Indirect(beanValue)
 		schemaEngine.GetTableByReflect(beanValue, beanIndirectValue)
 	}
+	schemaEngine.ReloadTables()
 	return schemaEngine
 }
 
