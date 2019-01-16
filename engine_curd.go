@@ -194,6 +194,52 @@ func (e *Engine) TableFromBeanAryReflect(beanAry interface{}) (*Table, error) {
 	}
 	return table, nil
 }
+func (e *Engine) Query(offset, limit int64, condition *SearchCondition, table *Table, cols ...string) ([]map[string]interface{}, int64, error) {
+	count, err := e.count(condition, table)
+	if err != nil {
+		return nil, count, nil
+	}
+	idAry, err := e.Index.Range(table, condition, offset, limit)
+	if err != nil {
+		return nil, count, err
+	}
+
+	if len(cols) == 0 {
+		cols = table.ColumnsSeq
+	}
+	fields := make([]string, 0)
+	for _, id := range idAry {
+		for _, colName := range cols {
+			fieldName := GetFieldName(id, colName)
+			fields = append(fields, fieldName)
+		}
+	}
+	valAry, err := e.redisClient.HMGet(table.GetTableKey(), fields...).Result()
+	if err != nil {
+		return nil, count, err
+	} else if valAry == nil {
+		return nil, count, nil
+	}
+	if len(fields) != len(valAry) {
+		return nil, count, Err_FieldValueInvalid
+	}
+	var resAry []map[string]interface{}
+
+	for i := 0; i < len(fields); i += len(cols) {
+		mapObj := make(map[string]interface{})
+		for j, colName := range cols {
+			if valAry[i+j] == nil && colName == table.PrimaryKey {
+				break
+			}
+			if valAry[i+j] == nil {
+				continue
+			}
+			mapObj[colName] = valAry[i+j]
+		}
+		resAry = append(resAry, mapObj)
+	}
+	return resAry, count, nil
+}
 func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry interface{}) (int64, error) {
 	sliceValue := reflect.Indirect(reflect.ValueOf(beanAry))
 	sliceElementType := sliceValue.Type().Elem()

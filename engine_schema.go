@@ -43,7 +43,7 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 
 	table, has := s.GetTableByName(s.TableName(beanIndirectValue))
 	if has {
-		s.Printfln("GetTableByName(%s),has", s.TableName(beanIndirectValue))
+		s.Printfln("CreateTable GetTableByName(%s),has", s.TableName(beanIndirectValue))
 		return Err_DataHadAvailable
 	}
 
