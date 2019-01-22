@@ -121,11 +121,15 @@ func (s *SchemaEngine) AlterTable(sql string) error {
 func (s *SchemaEngine) AddColumn(bean interface{}, colName string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
-	table, err := s.mapTable(reflectVal)
+	currentTable, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
 	}
-	for k, v := range table.ColumnsMap {
+	table,ok:=s.Tables[currentTable.Name]
+	if !ok {
+		return ERR_UnKnowTable
+	}
+	for k, v := range currentTable.ColumnsMap {
 		if k == colName {
 			columnsTb := SchemaColumnsFromColumn(table.TableId, v)
 			err := s.Insert(columnsTb)
@@ -137,16 +141,20 @@ func (s *SchemaEngine) AddColumn(bean interface{}, colName string) error {
 	}
 
 	s.tablesMutex.Lock()
-	s.Tables[table.Name] = table
+	s.Tables[table.Name] = currentTable
 	s.tablesMutex.Unlock()
 	return nil
 }
 func (s *SchemaEngine) RemoveColumn(bean interface{}, colName string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
-	table, err := s.mapTable(reflectVal)
+	currentTable, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
+	}
+	table,ok:=s.Tables[currentTable.Name]
+	if !ok {
+		return ERR_UnKnowTable
 	}
 	_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, colName, "ColumnName"))
 	if err != nil {
@@ -154,18 +162,22 @@ func (s *SchemaEngine) RemoveColumn(bean interface{}, colName string) error {
 	}
 
 	s.tablesMutex.Lock()
-	s.Tables[table.Name] = table
+	s.Tables[table.Name] = currentTable
 	s.tablesMutex.Unlock()
 	return nil
 }
 func (s *SchemaEngine) AddIndex(bean interface{}, colName string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
-	table, err := s.mapTable(reflectVal)
+	currentTable, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
 	}
-	for k, v := range table.IndexesMap {
+	table,ok:=s.Tables[currentTable.Name]
+	if !ok {
+		return ERR_UnKnowTable
+	}
+	for k, v := range currentTable.IndexesMap {
 		if k == colName {
 			columnsTb := SchemaIndexsFromColumn(table.TableId, v)
 			err := s.Insert(columnsTb)
@@ -177,16 +189,20 @@ func (s *SchemaEngine) AddIndex(bean interface{}, colName string) error {
 	}
 
 	s.tablesMutex.Lock()
-	s.Tables[table.Name] = table
+	s.Tables[table.Name] = currentTable
 	s.tablesMutex.Unlock()
 	return nil
 }
 func (s *SchemaEngine) RemoveIndex(bean interface{}, colName string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
-	table, err := s.mapTable(reflectVal)
+	currentTable, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
+	}
+	table,ok:=s.Tables[currentTable.Name]
+	if !ok {
+		return ERR_UnKnowTable
 	}
 	_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, colName, "IndexName"))
 	if err != nil {
@@ -194,7 +210,7 @@ func (s *SchemaEngine) RemoveIndex(bean interface{}, colName string) error {
 	}
 
 	s.tablesMutex.Lock()
-	s.Tables[table.Name] = table
+	s.Tables[table.Name] = currentTable
 	s.tablesMutex.Unlock()
 	return nil
 }
