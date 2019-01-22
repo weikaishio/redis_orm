@@ -108,7 +108,7 @@ func TestEngine_Query(t *testing.T) {
 	tableName := "faq"
 	table, has := engine.Schema.GetTableByName(tableName)
 	if !has {
-		t.Logf("GetTableByName(%s),has:%b", tableName, has)
+		t.Logf("GetTableByName(%s),has:%v", tableName, has)
 		return
 	}
 	resAry, count, err := engine.Query(0, 210, redis_orm.NewSearchConditionV2(9889,

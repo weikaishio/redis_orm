@@ -100,39 +100,103 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 }
 
 /*
-todo: AddColumn
+todo:解释器，需要定义语法~ 头大~ 比如：
+ALTER TABLE table_name ADD COLUMN column_name string DEFAULT abc COMMENT 测试列 AFTER updated_at;
+
+ALTER TABLE table_name ADD INDEX index_name uid;
+
+ALTER TABLE table_name ADD INDEX index_name (uid, name);
+
+CREATE TABLE table_name (
+  column_name1 INT(11) COMMENT 列1,
+  column_name2 string DEFAULT abc COMMENT 列2,
+  column_name3 BIGINT(20) created_at COMMENT 添加时间,
+) pk(column_name1) autoincr=1 sync2db COMMENT='xx表';
 */
+func (s *SchemaEngine) AlterTable(sql string) error {
+	return nil
+}
+
 //the bean is new, the column which it is the new need to be added
 func (s *SchemaEngine) AddColumn(bean interface{}, colName string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
-	_, err := s.mapTable(reflectVal)
+	table, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
 	}
-	//for k,v:=range table.ColumnsMap{
-	//	if k==colName {
-	//		columnAry := make([]interface{}, 0)
-	//		for _, v := range table.ColumnsMap {
-	//			columnsTb := SchemaColumnsFromColumn(tablesTb.Id, v)
-	//			columnAry = append(columnAry, columnsTb)
-	//		}
-	//		affectedRows, err := s.InsertMulti(columnAry...)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//}
+	for k, v := range table.ColumnsMap {
+		if k == colName {
+			columnsTb := SchemaColumnsFromColumn(table.TableId, v)
+			err := s.Insert(columnsTb)
+			if err != nil {
+				return err
+			}
+			break
+		}
+	}
+
+	s.tablesMutex.Lock()
+	s.Tables[table.Name] = table
+	s.tablesMutex.Unlock()
 	return nil
 }
 func (s *SchemaEngine) RemoveColumn(bean interface{}, colName string) error {
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := s.mapTable(reflectVal)
+	if err != nil {
+		return err
+	}
+	_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, colName, "ColumnName"))
+	if err != nil {
+		return err
+	}
+
+	s.tablesMutex.Lock()
+	s.Tables[table.Name] = table
+	s.tablesMutex.Unlock()
 	return nil
 }
 func (s *SchemaEngine) AddIndex(bean interface{}, colName string) error {
-	return s.AddColumn(bean, colName)
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := s.mapTable(reflectVal)
+	if err != nil {
+		return err
+	}
+	for k, v := range table.IndexesMap {
+		if k == colName {
+			columnsTb := SchemaIndexsFromColumn(table.TableId, v)
+			err := s.Insert(columnsTb)
+			if err != nil {
+				return err
+			}
+			break
+		}
+	}
+
+	s.tablesMutex.Lock()
+	s.Tables[table.Name] = table
+	s.tablesMutex.Unlock()
+	return nil
 }
 func (s *SchemaEngine) RemoveIndex(bean interface{}, colName string) error {
-	return s.RemoveColumn(bean, colName)
+	beanValue := reflect.ValueOf(bean)
+	reflectVal := reflect.Indirect(beanValue)
+	table, err := s.mapTable(reflectVal)
+	if err != nil {
+		return err
+	}
+	_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, colName, "IndexName"))
+	if err != nil {
+		return err
+	}
+
+	s.tablesMutex.Lock()
+	s.Tables[table.Name] = table
+	s.tablesMutex.Unlock()
+	return nil
 }
 func (s *SchemaEngine) TableDrop(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
@@ -167,12 +231,13 @@ func (s *SchemaEngine) TableDrop(bean interface{}) error {
 		return err
 	}
 
-	err = s.TableTruncate(bean)
-	if err == nil {
-		s.tablesMutex.Lock()
-		delete(s.Tables, table.Name)
-		s.tablesMutex.Unlock()
-	}
+	//TableTruncate 敏感操作，需要独立调用，等可以支持动态改表结构，无需使用TableDrop再恢复
+	//err = s.TableTruncate(bean)
+	//if err == nil {
+	s.tablesMutex.Lock()
+	delete(s.Tables, table.Name)
+	s.tablesMutex.Unlock()
+	//}
 	return err
 }
 

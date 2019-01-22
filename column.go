@@ -68,3 +68,16 @@ func NewEmptyColumn(colName string) *Column {
 	return &Column{Name: colName, IsPrimaryKey: false,
 		IsAutoIncrement: false}
 }
+
+type ColumnsModel []*Column
+
+func (c ColumnsModel) Len() int {
+	return len(c)
+}
+
+func (c ColumnsModel) Less(i, j int) bool {
+	return c[i].Seq < c[j].Seq
+}
+func (c ColumnsModel) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
