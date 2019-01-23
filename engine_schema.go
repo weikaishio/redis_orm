@@ -138,7 +138,7 @@ func (s *SchemaEngine) AddColumn(bean interface{}, cols ...string) error {
 				_, has = table.ColumnsMap[col]
 				if has {
 					s.Printfln("AddColumn(%s) col:%s, already exist", table.Name, col)
-					break
+					continue
 				}
 				columnsTb := SchemaColumnsFromColumn(table.TableId, v)
 				err := s.Insert(columnsTb)
@@ -175,7 +175,7 @@ func (s *SchemaEngine) RemoveColumn(bean interface{}, cols ...string) error {
 				_, has = table.ColumnsMap[colName]
 				if !has {
 					s.Printfln("RemoveColumn(%s) col:%s, not exist", table.Name, col)
-					break
+					continue
 				}
 				_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, colName, "ColumnName"))
 				if err != nil {
@@ -209,7 +209,7 @@ func (s *SchemaEngine) AddIndex(bean interface{}, cols ...string) error {
 				_, has := table.IndexesMap[table.GetIndexKey(col)]
 				if has {
 					s.Printfln("AddIndex(%s) index:%s, already exist", table.Name, col)
-					break
+					continue
 				}
 
 				index := SchemaIndexsFromColumn(table.TableId, v)
@@ -249,7 +249,7 @@ func (s *SchemaEngine) RemoveIndex(bean interface{}, cols ...string) error {
 				dropIndex, has := table.IndexesMap[table.GetIndexKey(col)]
 				if !has {
 					s.Printfln("AddIndex(%s) index:%s, not exist", table.Name, col)
-					break
+					continue
 				}
 				_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, col, "IndexName"))
 				if err != nil {
