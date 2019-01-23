@@ -11,16 +11,17 @@ const (
 )
 
 type SchemaIndexsTb struct {
-	Id           int64  `redis_orm:"pk autoincr comment 'ID'"`
-	TableId      int64  `redis_orm:"index comment '表ID'"`
-	Seq          byte   `redis_orm:"comment '索引顺序'"`
-	IndexName    string `redis_orm:"comment '索引名'"`
-	IndexComment string `redis_orm:"dft '' comment '索引注释'"`
-	IndexColumn  string `redis_orm:"comment '索引字段，&分割'"`
-	IndexType    int    `redis_orm:"comment '数据类型'"`
-	IsUnique     bool   `redis_orm:"comment '是否唯一索引'"`
-	CreatedAt    int64  `redis_orm:"created_at comment '创建时间'"`
-	UpdatedAt    int64  `redis_orm:"updated_at comment '修改时间'"`
+	Id               int64  `redis_orm:"pk autoincr comment 'ID'"`
+	TableId          int64  `redis_orm:"index comment '表ID'"`
+	Seq              byte   `redis_orm:"comment '索引顺序'"`
+	IndexName        string `redis_orm:"comment '索引名'"`
+	IndexComment     string `redis_orm:"dft '' comment '索引注释'"`
+	IndexColumn      string `redis_orm:"comment '索引字段，&分割'"`
+	IndexType        int    `redis_orm:"comment '数据类型'"`
+	IsUnique         bool   `redis_orm:"comment '是否唯一索引'"`
+	TableIdIndexName string `redis_orm:"combinedindex TableId&IndexName comment '组合索引(表ID&索引名)'"`
+	CreatedAt        int64  `redis_orm:"created_at comment '创建时间'"`
+	UpdatedAt        int64  `redis_orm:"updated_at comment '修改时间'"`
 }
 
 func SchemaIndexsFromColumn(tableId int64, v *Index) *SchemaIndexsTb {

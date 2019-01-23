@@ -1,15 +1,16 @@
 package redis_orm
 
 type SchemaColumnsTb struct {
-	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
-	TableId       int64  `redis_orm:"index comment '表ID'"`
-	Seq           byte   `redis_orm:"comment '列顺序'"`
-	ColumnName    string `redis_orm:"comment '列名'"`
-	ColumnComment string `redis_orm:"dft '' comment '列注释'"`
-	DataType      string `redis_orm:"comment '数据类型'"`
-	DefaultValue  string `redis_orm:"comment '默认值'"`
-	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
-	UpdatedAt     int64  `redis_orm:"updated_at comment '修改时间'"`
+	Id                int64  `redis_orm:"pk autoincr comment 'ID'"`
+	TableId           int64  `redis_orm:"index comment '表ID'"`
+	Seq               byte   `redis_orm:"comment '列顺序'"`
+	ColumnName        string `redis_orm:"comment '列名'"`
+	ColumnComment     string `redis_orm:"dft '' comment '列注释'"`
+	DataType          string `redis_orm:"comment '数据类型'"`
+	DefaultValue      string `redis_orm:"comment '默认值'"`
+	TableIdColumnName string `redis_orm:"combinedindex TableId&ColumnName comment '组合索引(表ID&列名)'"`
+	CreatedAt         int64  `redis_orm:"created_at comment '创建时间'"`
+	UpdatedAt         int64  `redis_orm:"updated_at comment '修改时间'"`
 }
 
 func SchemaColumnsFromColumn(tableId int64, v *Column) *SchemaColumnsTb {

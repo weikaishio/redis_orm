@@ -130,29 +130,35 @@ func (s *SchemaEngine) AddColumn(bean interface{}, cols ...string) error {
 		return ERR_UnKnowTable
 	}
 
-	currentTable.TableId = table.TableId
+	var isNeedRefreshTable bool
 
-	for k, v := range currentTable.ColumnsMap {
-		for _, col := range cols {
-			if k == col {
-				_, has = table.ColumnsMap[col]
-				if has {
-					s.Printfln("AddColumn(%s) col:%s, already exist", table.Name, col)
-					continue
-				}
-				columnsTb := SchemaColumnsFromColumn(table.TableId, v)
-				err := s.Insert(columnsTb)
-				if err != nil {
-					return err
-				}
-				break
-			}
+	for _, col := range cols {
+		v, has := table.ColumnsMap[col]
+		if has {
+			s.Printfln("AddColumn(%s) col:%s, already exist", table.Name, col)
+			continue
 		}
+		v, has = currentTable.ColumnsMap[col]
+		if !has {
+			s.Printfln("AddColumn(%s) col:%s not exist at new table bean", table.Name, col)
+			continue
+		}
+		columnsTb := SchemaColumnsFromColumn(table.TableId, v)
+		err := s.Insert(columnsTb)
+		if err != nil {
+			return err
+		} else {
+			isNeedRefreshTable = true
+		}
+		break
 	}
 
-	s.tablesMutex.Lock()
-	s.Tables[table.Name] = currentTable
-	s.tablesMutex.Unlock()
+	if isNeedRefreshTable {
+		s.ReloadTable(table.Name)
+		if s.isSync2DB && table.IsSync2DB {
+			s.syncDB.Create2DB(bean)
+		}
+	}
 	return nil
 }
 func (s *SchemaEngine) RemoveColumn(bean interface{}, cols ...string) error {
@@ -167,27 +173,30 @@ func (s *SchemaEngine) RemoveColumn(bean interface{}, cols ...string) error {
 		return ERR_UnKnowTable
 	}
 
-	currentTable.TableId = table.TableId
+	var isNeedRefreshTable bool
 
-	for _, colName := range table.ColumnsSeq {
-		for _, col := range cols {
-			if col == colName {
-				_, has = table.ColumnsMap[colName]
-				if !has {
-					s.Printfln("RemoveColumn(%s) col:%s, not exist", table.Name, col)
-					continue
-				}
-				_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, colName, "ColumnName"))
-				if err != nil {
-					return err
-				}
-			}
+	for _, col := range cols {
+		_, has = table.ColumnsMap[col]
+		if !has {
+			s.Printfln("RemoveColumn(%s) col:%s, not exist", table.Name, col)
+			continue
+		}
+		_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, col, "ColumnName"))
+		if err != nil {
+			return err
+		} else {
+			isNeedRefreshTable = true
 		}
 	}
 
-	s.tablesMutex.Lock()
-	s.Tables[table.Name] = currentTable
-	s.tablesMutex.Unlock()
+	if isNeedRefreshTable {
+		if isNeedRefreshTable {
+			s.ReloadTable(table.Name)
+			if s.isSync2DB && table.IsSync2DB {
+				s.syncDB.Create2DB(bean)
+			}
+		}
+	}
 	return nil
 }
 func (s *SchemaEngine) AddIndex(bean interface{}, cols ...string) error {
@@ -201,32 +210,39 @@ func (s *SchemaEngine) AddIndex(bean interface{}, cols ...string) error {
 	if !has {
 		return ERR_UnKnowTable
 	}
-	currentTable.TableId = table.TableId
 
-	for k, v := range currentTable.IndexesMap {
-		for _, col := range cols {
-			if k == table.GetIndexKey(col) {
-				_, has := table.IndexesMap[table.GetIndexKey(col)]
-				if has {
-					s.Printfln("AddIndex(%s) index:%s, already exist", table.Name, col)
-					continue
-				}
+	var isNeedRefreshTable bool
 
-				index := SchemaIndexsFromColumn(table.TableId, v)
-				err := s.Insert(index)
-				if err != nil {
-					return err
-				} else {
-					s.Engine.Index.ReBuild(bean)
-				}
-				break
-			}
+	for _, col := range cols {
+		v, has := table.IndexesMap[table.GetIndexKey(col)]
+		if has {
+			s.Printfln("AddIndex(%s) index:%s, already exist", table.Name, col)
+			continue
 		}
+
+		v, has = currentTable.IndexesMap[table.GetIndexKey(col)]
+		if !has {
+			s.Printfln("AddIndex(%s) index:%s not exist at new table bean", table.Name, col)
+			continue
+		}
+
+		index := SchemaIndexsFromColumn(table.TableId, v)
+		err := s.Insert(index)
+		if err != nil {
+			return err
+		} else {
+			s.Engine.Index.ReBuild(bean)
+			isNeedRefreshTable = true
+		}
+		break
 	}
 
-	s.tablesMutex.Lock()
-	s.Tables[table.Name] = currentTable
-	s.tablesMutex.Unlock()
+	if isNeedRefreshTable {
+		s.ReloadTable(table.Name)
+		if s.isSync2DB && table.IsSync2DB {
+			s.syncDB.Create2DB(bean)
+		}
+	}
 	return nil
 }
 func (s *SchemaEngine) RemoveIndex(bean interface{}, cols ...string) error {
@@ -241,29 +257,29 @@ func (s *SchemaEngine) RemoveIndex(bean interface{}, cols ...string) error {
 		return ERR_UnKnowTable
 	}
 
-	currentTable.TableId = table.TableId
+	var isNeedRefreshTable bool
 
-	for k, _ := range currentTable.IndexesMap {
-		for _, col := range cols {
-			if k == table.GetIndexKey(col) {
-				dropIndex, has := table.IndexesMap[table.GetIndexKey(col)]
-				if !has {
-					s.Printfln("AddIndex(%s) index:%s, not exist", table.Name, col)
-					continue
-				}
-				_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, col, "IndexName"))
-				if err != nil {
-					return err
-				} else {
-					s.Engine.Index.DropSingleIndex(dropIndex)
-				}
-			}
+	for _, col := range cols {
+		dropIndex, has := table.IndexesMap[table.GetIndexKey(col)]
+		if !has {
+			s.Printfln("AddIndex(%s) index:%s, not exist", table.Name, col)
+			continue
+		}
+		_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, col, "IndexName"))
+		if err != nil {
+			return err
+		} else {
+			s.Engine.Index.DropSingleIndex(dropIndex)
+			isNeedRefreshTable = true
 		}
 	}
 
-	s.tablesMutex.Lock()
-	s.Tables[table.Name] = currentTable
-	s.tablesMutex.Unlock()
+	if isNeedRefreshTable {
+		s.ReloadTable(table.Name)
+		if s.isSync2DB && table.IsSync2DB {
+			s.syncDB.Create2DB(bean)
+		}
+	}
 	return nil
 }
 func (s *SchemaEngine) TableDrop(bean interface{}) error {
@@ -321,6 +337,44 @@ func (s *SchemaEngine) ShowTables() []string {
 	return tableAry
 }
 
+func (s *SchemaEngine) ReloadTable(tableName string) (*Table, error) {
+	schemaTable := &SchemaTablesTb{}
+	has, err := s.GetByCondition(schemaTable, NewSearchConditionV2(tableName, tableName, "TableName"))
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ERR_UnKnowTable
+	}
+
+	table := TableFromSchemaTables(schemaTable)
+
+	var columnsAry []*SchemaColumnsTb
+	_, err = s.Find(0, int64(math.MaxInt64), NewSearchConditionV2(schemaTable.Id, schemaTable.Id, "TableId"), &columnsAry)
+	if err != nil {
+		s.Printfln("SchemaTables2MapTables(%v) find SchemaColumnsTb,err:%v", schemaTable, err)
+		return nil, err
+	}
+	for _, schemaColumn := range columnsAry {
+		table.ColumnsSeq = append(table.ColumnsSeq, schemaColumn.ColumnName)
+		table.ColumnsMap[schemaColumn.ColumnName] = ColumnFromSchemaColumns(schemaColumn, schemaTable)
+	}
+
+	var indexsAry []*SchemaIndexsTb
+	_, err = s.Find(0, int64(math.MaxInt64), NewSearchConditionV2(schemaTable.Id, schemaTable.Id, "TableId"), &indexsAry)
+	if err != nil {
+		s.Printfln("SchemaTables2MapTables(%v) find SchemaIndexsTb,err:%v", schemaTable, err)
+		return nil, err
+	}
+	for _, schemaIndex := range indexsAry {
+		table.IndexesMap[strings.ToLower(schemaIndex.IndexColumn)] = IndexFromSchemaIndexs(schemaIndex)
+	}
+
+	s.tablesMutex.Lock()
+	s.Tables[table.Name] = table
+	s.tablesMutex.Unlock()
+	return table, nil
+}
 func (s *SchemaEngine) ReloadTables() ([]*Table, error) {
 	tables := make([]*Table, 0)
 	var tablesAry []*SchemaTablesTb

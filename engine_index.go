@@ -306,7 +306,7 @@ func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value
 	for _, index := range indexsMap {
 		if len(cols) > 0 {
 			if !ColsIsExistIndex(index, cols...) {
-				ixe.engine.Printfln("Update ColsIsExistIndex:%v,cols:%v", index.IndexColumn, cols)
+				//ixe.engine.Printfln("Update ColsIsExistIndex:%v,cols:%v", index.IndexColumn, cols)
 				continue
 			}
 		}
