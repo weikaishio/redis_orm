@@ -118,25 +118,35 @@ func (s *SchemaEngine) AlterTable(sql string) error {
 }
 
 //the bean is new, the column which it is the new need to be added
-func (s *SchemaEngine) AddColumn(bean interface{}, colName string) error {
+func (s *SchemaEngine) AddColumn(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 	currentTable, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
 	}
-	table,ok:=s.Tables[currentTable.Name]
-	if !ok {
+	table, has := s.Tables[currentTable.Name]
+	if !has {
 		return ERR_UnKnowTable
 	}
+
+	currentTable.TableId = table.TableId
+
 	for k, v := range currentTable.ColumnsMap {
-		if k == colName {
-			columnsTb := SchemaColumnsFromColumn(table.TableId, v)
-			err := s.Insert(columnsTb)
-			if err != nil {
-				return err
+		for _, col := range cols {
+			if k == col {
+				_, has = table.ColumnsMap[col]
+				if has {
+					s.Printfln("AddColumn(%s) col:%s, already exist", table.Name, col)
+					break
+				}
+				columnsTb := SchemaColumnsFromColumn(table.TableId, v)
+				err := s.Insert(columnsTb)
+				if err != nil {
+					return err
+				}
+				break
 			}
-			break
 		}
 	}
 
@@ -145,20 +155,34 @@ func (s *SchemaEngine) AddColumn(bean interface{}, colName string) error {
 	s.tablesMutex.Unlock()
 	return nil
 }
-func (s *SchemaEngine) RemoveColumn(bean interface{}, colName string) error {
+func (s *SchemaEngine) RemoveColumn(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 	currentTable, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
 	}
-	table,ok:=s.Tables[currentTable.Name]
-	if !ok {
+	table, has := s.Tables[currentTable.Name]
+	if !has {
 		return ERR_UnKnowTable
 	}
-	_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, colName, "ColumnName"))
-	if err != nil {
-		return err
+
+	currentTable.TableId = table.TableId
+
+	for _, colName := range table.ColumnsSeq {
+		for _, col := range cols {
+			if col == colName {
+				_, has = table.ColumnsMap[colName]
+				if !has {
+					s.Printfln("RemoveColumn(%s) col:%s, not exist", table.Name, col)
+					break
+				}
+				_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, colName, "ColumnName"))
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	s.tablesMutex.Lock()
@@ -166,25 +190,37 @@ func (s *SchemaEngine) RemoveColumn(bean interface{}, colName string) error {
 	s.tablesMutex.Unlock()
 	return nil
 }
-func (s *SchemaEngine) AddIndex(bean interface{}, colName string) error {
+func (s *SchemaEngine) AddIndex(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 	currentTable, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
 	}
-	table,ok:=s.Tables[currentTable.Name]
-	if !ok {
+	table, has := s.Tables[currentTable.Name]
+	if !has {
 		return ERR_UnKnowTable
 	}
+	currentTable.TableId = table.TableId
+
 	for k, v := range currentTable.IndexesMap {
-		if k == colName {
-			columnsTb := SchemaIndexsFromColumn(table.TableId, v)
-			err := s.Insert(columnsTb)
-			if err != nil {
-				return err
+		for _, col := range cols {
+			if k == table.GetIndexKey(col) {
+				_, has := table.IndexesMap[table.GetIndexKey(col)]
+				if has {
+					s.Printfln("AddIndex(%s) index:%s, already exist", table.Name, col)
+					break
+				}
+
+				index := SchemaIndexsFromColumn(table.TableId, v)
+				err := s.Insert(index)
+				if err != nil {
+					return err
+				} else {
+					s.Engine.Index.ReBuild(bean)
+				}
+				break
 			}
-			break
 		}
 	}
 
@@ -193,20 +229,36 @@ func (s *SchemaEngine) AddIndex(bean interface{}, colName string) error {
 	s.tablesMutex.Unlock()
 	return nil
 }
-func (s *SchemaEngine) RemoveIndex(bean interface{}, colName string) error {
+func (s *SchemaEngine) RemoveIndex(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 	currentTable, err := s.mapTable(reflectVal)
 	if err != nil {
 		return err
 	}
-	table,ok:=s.Tables[currentTable.Name]
-	if !ok {
+	table, has := s.Tables[currentTable.Name]
+	if !has {
 		return ERR_UnKnowTable
 	}
-	_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, colName, "IndexName"))
-	if err != nil {
-		return err
+
+	currentTable.TableId = table.TableId
+
+	for k, _ := range currentTable.IndexesMap {
+		for _, col := range cols {
+			if k == table.GetIndexKey(col) {
+				dropIndex, has := table.IndexesMap[table.GetIndexKey(col)]
+				if !has {
+					s.Printfln("AddIndex(%s) index:%s, not exist", table.Name, col)
+					break
+				}
+				_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, col, "IndexName"))
+				if err != nil {
+					return err
+				} else {
+					s.Engine.Index.DropSingleIndex(dropIndex)
+				}
+			}
+		}
 	}
 
 	s.tablesMutex.Lock()
