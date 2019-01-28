@@ -42,7 +42,7 @@ func SchemaTablesFromTable(table *Table) *SchemaTablesTb {
 	return &SchemaTablesTb{
 		Id:            table.TableId,
 		TableName:     table.Name,
-		TableComment:  table.Name,
+		TableComment:  table.Comment,
 		PrimaryKey:    table.PrimaryKey,
 		AutoIncrement: table.AutoIncrement,
 		IsSync2DB:     table.IsSync2DB,
@@ -54,6 +54,7 @@ func SchemaTablesFromTable(table *Table) *SchemaTablesTb {
 type Table struct {
 	TableId int64
 	Name    string
+	Comment string
 	//Type          reflect.Type
 	ColumnsSeq    []string
 	ColumnsMap    map[string]*Column
@@ -70,6 +71,7 @@ func TableFromSchemaTables(table *SchemaTablesTb) *Table {
 	return &Table{
 		TableId:       table.Id,
 		Name:          table.TableName,
+		Comment:       table.TableComment,
 		PrimaryKey:    table.PrimaryKey,
 		AutoIncrement: table.AutoIncrement,
 		IsSync2DB:     table.IsSync2DB,

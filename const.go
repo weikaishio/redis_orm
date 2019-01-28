@@ -51,13 +51,13 @@ const (
 )
 
 var (
-	ERR_UnKnowField           = errors.New("redis-orm-error:unknown field")
+	ERR_UnKnowField           = errors.New("redis-orm-error:unknown column")
 	ERR_UnKnowTable           = errors.New("redis-orm-error:unknown table")
 	ERR_UnKnowError           = errors.New("redis-orm-error:unknown error")
-	ERR_NotSupportIndexField  = errors.New("redis-orm-error:not support this filed's index")
+	ERR_NotSupportIndexField  = errors.New("redis-orm-error:not support this field's index")
 	Err_UnSupportedType       = errors.New("redis-orm-error:unsupported type")
 	Err_UnSupportedTableModel = errors.New("redis-orm-error:unsupported table model")
-	Err_FieldValueInvalid     = errors.New("redis-orm-error:field value invalid")
+	Err_FieldValueInvalid     = errors.New("redis-orm-error:column value invalid")
 	Err_PrimaryKeyNotFound    = errors.New("redis-orm-error:primarykey not found")
 	Err_PrimaryKeyTypeInvalid = errors.New("redis-orm-error:primarykey type invalid")
 

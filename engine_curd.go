@@ -194,6 +194,17 @@ func (e *Engine) TableFromBeanAryReflect(beanAry interface{}) (*Table, error) {
 	}
 	return table, nil
 }
+func (e *Engine) FileterCols(table *Table, cols ...string) []string {
+filterCols:
+	for i, col := range cols {
+		_, isExist := table.ColumnsMap[col]
+		if !isExist {
+			cols = append(cols[:i], cols[i+1:]...)
+			goto filterCols
+		}
+	}
+	return cols
+}
 func (e *Engine) Query(offset, limit int64, condition *SearchCondition, table *Table, cols ...string) ([]map[string]interface{}, int64, error) {
 	count, err := e.count(condition, table)
 	if err != nil {
@@ -204,9 +215,12 @@ func (e *Engine) Query(offset, limit int64, condition *SearchCondition, table *T
 		return nil, count, err
 	}
 
+	cols = e.FileterCols(table, cols...)
+
 	if len(cols) == 0 {
 		cols = table.ColumnsSeq
 	}
+
 	fields := make([]string, 0)
 	for _, id := range idAry {
 		for _, colName := range cols {
@@ -228,11 +242,12 @@ func (e *Engine) Query(offset, limit int64, condition *SearchCondition, table *T
 	for i := 0; i < len(fields); i += len(cols) {
 		mapObj := make(map[string]interface{})
 		for j, colName := range cols {
-			if valAry[i+j] == nil && colName == table.PrimaryKey {
-				break
-			}
 			if valAry[i+j] == nil {
-				continue
+				if colName == table.PrimaryKey {
+					break
+				} else {
+					continue
+				}
 			}
 			mapObj[colName] = valAry[i+j]
 		}
@@ -533,8 +548,10 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 		return 0, ERR_UnKnowTable
 	}
 
+	cols = e.FileterCols(table, cols...)
+
 	if len(cols) == 0 {
-		cols = table.ColumnsSeq
+		return 0, ERR_UnKnowField
 	}
 
 	idAry, err := e.Index.Range(table, searchCon, 0, 10000)
@@ -648,6 +665,7 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
+	e.Printfln("incr:%v,%v",beanValue,reflectVal)
 	table, has := e.GetTableByName(e.TableName(reflectVal))
 	if !has {
 		return 0, ERR_UnKnowTable
@@ -736,8 +754,10 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 		return ERR_UnKnowTable
 	}
 
+	cols = e.FileterCols(table, cols...)
+
 	if len(cols) == 0 {
-		cols = table.ColumnsSeq
+		return ERR_UnKnowField
 	}
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
@@ -810,17 +830,13 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	}
 	return err
 }
-func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
+func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition) (int, error) {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(e.TableName(reflectVal))
 	if !has {
 		return 0, ERR_UnKnowTable
-	}
-
-	if len(cols) == 0 {
-		cols = table.ColumnsSeq
 	}
 
 	idAry, err := e.Index.Range(table, searchCon, 0, 10000)
@@ -849,7 +865,7 @@ func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition,
 			SetInt64FromStr(&pkInt, idStr)
 			e.Index.Delete(table, pkInt)
 			if e.isSync2DB && table.IsSync2DB {
-				e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, cols, fmt.Sprintf("id=%d", pkInt))
+				e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, nil, fmt.Sprintf("id=%d", pkInt))
 			}
 		}
 	}

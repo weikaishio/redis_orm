@@ -152,6 +152,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 	table := NewEmptyTable()
 	//table.Type = typ
 	table.Name = strings.ToLower(e.TableName(v))
+	//table.Comment=
 	//ptr or struct:typ.NumField()
 	for i := 0; i < typ.NumField(); i++ {
 		tag := typ.Field(i).Tag
