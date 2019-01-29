@@ -190,11 +190,9 @@ func (s *SchemaEngine) RemoveColumn(bean interface{}, cols ...string) error {
 	}
 
 	if isNeedRefreshTable {
-		if isNeedRefreshTable {
-			s.ReloadTable(table.Name)
-			if s.isSync2DB && table.IsSync2DB {
-				s.syncDB.Create2DB(bean)
-			}
+		s.ReloadTable(table.Name)
+		if s.isSync2DB && table.IsSync2DB {
+			s.syncDB.Create2DB(bean)
 		}
 	}
 	return nil
