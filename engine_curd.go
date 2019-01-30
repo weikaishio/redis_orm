@@ -13,6 +13,9 @@ todo: SearchCondition not a elegant way..
 */
 func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (bool, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return false, Err_NeedPointer
+	}
 	reflectVal := reflect.Indirect(beanValue)
 	table, has := e.GetTableByName(e.TableName(reflectVal))
 	if !has {
@@ -27,7 +30,11 @@ func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (b
 		return false, nil
 	}
 	colValue := reflectVal.FieldByName(table.PrimaryKey)
-	colValue.SetInt(getId)
+	if colValue.CanSet() {
+		colValue.SetInt(getId)
+	} else {
+		return false, Err_NeedPointer
+	}
 
 	fields := make([]string, 0)
 	for _, colName := range table.ColumnsSeq {
@@ -59,6 +66,9 @@ func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (b
 }
 func (e *Engine) Get(bean interface{}) (bool, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return false, Err_NeedPointer
+	}
 	reflectVal := reflect.Indirect(beanValue)
 	table, has := e.GetTableByName(e.TableName(reflectVal))
 	if !has {
@@ -357,6 +367,9 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 	var affectBeans []interface{}
 	for _, bean := range beans {
 		beanValue := reflect.ValueOf(bean)
+		if beanValue.Kind() != reflect.Ptr {
+			return 0, Err_NeedPointer
+		}
 		reflectVal := reflect.Indirect(beanValue)
 		if table == nil {
 			var has bool
@@ -407,13 +420,17 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 			colValue := reflectVal.FieldByName(colName)
 			if col.IsAutoIncrement {
 				valMap[fieldName] = ToString(lastId)
-				colValue.SetInt(lastId)
+				if colValue.CanSet() {
+					colValue.SetInt(lastId)
+				}
 			} else if col.IsCombinedIndex {
 
 			} else if col.IsCreated || col.IsUpdated {
 				createdAt := time.Now().In(e.TZLocation).Unix()
 				valMap[fieldName] = createdAt
-				colValue.SetInt(createdAt)
+				if colValue.CanSet() {
+					colValue.SetInt(createdAt)
+				}
 			} else {
 				SetDefaultValue(col, &colValue)
 				valMap[fieldName] = ToString(colValue.Interface())
@@ -447,6 +464,9 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 //Done:unique index is exist? -> IsExistData
 func (e *Engine) Insert(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return Err_NeedPointer
+	}
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(e.TableName(reflectVal))
@@ -498,13 +518,17 @@ func (e *Engine) Insert(bean interface{}) error {
 		colValue := reflectVal.FieldByName(colName)
 		if col.IsAutoIncrement {
 			valMap[fieldName] = ToString(lastId)
-			colValue.SetInt(lastId)
+			if colValue.CanSet() {
+				colValue.SetInt(lastId)
+			}
 		} else if col.IsCombinedIndex {
 
 		} else if col.IsCreated || col.IsUpdated {
 			createdAt := time.Now().In(e.TZLocation).Unix()
 			valMap[fieldName] = createdAt
-			colValue.SetInt(createdAt)
+			if colValue.CanSet() {
+				colValue.SetInt(createdAt)
+			}
 		} else {
 			SetDefaultValue(col, &colValue)
 			valMap[fieldName] = ToString(colValue.Interface())
@@ -541,6 +565,9 @@ func (e *Engine) GetDefaultValue(bean interface{}) error {
 
 func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return 0, Err_NeedPointer
+	}
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(e.TableName(reflectVal))
@@ -647,7 +674,9 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 			SetInt64FromStr(&pkInt, pkIntStr)
 
 			colValue := reflectVal.FieldByName(table.PrimaryKey)
-			colValue.SetInt(pkInt)
+			if colValue.CanSet() {
+				colValue.SetInt(pkInt)
+			}
 
 			err = e.Index.Update(table, beanValue, reflectVal, cols...)
 			if err != nil {
@@ -667,6 +696,9 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 }
 func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return 0, Err_NeedPointer
+	}
 	reflectVal := reflect.Indirect(beanValue)
 
 	e.Printfln("incr:%v,%v",beanValue,reflectVal)
@@ -705,7 +737,9 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	if err == nil {
 		if e.isSync2DB && table.IsSync2DB {
 			colValue := reflectVal.FieldByName(col)
-			colValue.SetInt(res)
+			if colValue.CanSet() {
+				colValue.SetInt(res)
+			}
 			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{Camel2Underline(col)}, fmt.Sprintf("id=%d", pkInt))
 		}
 	}

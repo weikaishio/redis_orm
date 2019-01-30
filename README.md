@@ -1,4 +1,5 @@
 # redis_orm
+[![Build Status](https://travis-ci.org/weikaishio/redis_orm.svg?branch=master)](https://travis-ci.org/weikaishio/redis_orm)
 Object Relational Mapping use redis as a relational database
 
 ### started
