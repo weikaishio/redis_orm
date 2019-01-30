@@ -149,7 +149,7 @@ func (e *Engine) GetTableByReflect(beanValue, beanIndirectValue reflect.Value) (
 func GetFieldName(pkId interface{}, colName string) string {
 	return fmt.Sprintf("%v_%s", pkId, colName)
 }
-func MapTag(table *Table, seq int, columnName string, columnType reflect.Kind, rdsTagStr string) error {
+func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType reflect.Kind, rdsTagStr string) error {
 	col := NewEmptyColumn(columnName)
 	col.Seq = byte(seq)
 	col.DataType = columnType.String()
@@ -223,73 +223,77 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 		tag := typ.Field(i).Tag
 		rdsTagStr := tag.Get(TagIdentifier)
 
-		var col *Column
+		//var col *Column
 		fieldValue := v.Field(i)
 		fieldType := fieldValue.Type()
 
 		if rdsTagStr != "" {
-			col = NewEmptyColumn(typ.Field(i).Name)
-			col.Seq = byte(i)
-			col.DataType = fieldType.Kind().String()
-			e.Printfln("col.DataType:%s", col.DataType)
-			tags := splitTag(rdsTagStr)
-			var (
-				isIndex   bool
-				isUnique  bool
-				indexName string
-			)
-			for j, key := range tags {
-				keyLower := strings.ToLower(key)
-				if keyLower == TagIndex {
-					isIndex = true
-					indexName = col.Name
-				} else if keyLower == TagUniqueIndex {
-					isIndex = true
-					indexName = col.Name
-					isUnique = true
-				} else if keyLower == TagDefaultValue {
-					if len(tags) > j {
-						col.DefaultValue = strings.Trim(tags[j+1], "'")
-					}
-				} else if keyLower == TagPrimaryKey {
-					col.IsPrimaryKey = true
-					isIndex = true
-					indexName = col.Name
-				} else if keyLower == TagAutoIncrement {
-					if table.AutoIncrement != "" {
-						return nil, Err_MoreThanOneIncrementColumn
-					}
-					col.IsAutoIncrement = true
-				} else if keyLower == TagComment {
-					if len(tags) > j {
-						col.Comment = strings.Trim(tags[j+1], "'")
-					}
-				} else if keyLower == TagCreatedAt {
-					col.IsCreated = true
-				} else if keyLower == TagUpdatedAt {
-					col.IsUpdated = true
-				} else if keyLower == TagCombinedindex {
-					//Done:combined index
-					if fieldType.Kind() != reflect.String && fieldType.Kind() != reflect.Int64 {
-						return nil, Err_CombinedIndexTypeError
-					}
-					if len(tags) > j && tags[j+1] != "" {
-						isIndex = true
-						indexName = tags[j+1]
-						col.IsCombinedIndex = true
-					}
-					continue
-				} else if keyLower == TagSync2DB {
-					table.IsSync2DB = true
-				} else {
-					//abondon
-				}
+			err := MapTableColumnFromTag(table, i, typ.Field(i).Name, fieldType.Kind(), rdsTagStr)
+			if err != nil {
+				return table, err
 			}
-			//col.Type = fieldType
-			table.AddColumn(col)
-			if isIndex {
-				table.AddIndex(fieldType.Kind(), indexName, col.Name, col.Comment, isUnique, col.Seq)
-			}
+			//col = NewEmptyColumn(typ.Field(i).Name)
+			//col.Seq = byte(i)
+			//col.DataType = fieldType.Kind().String()
+			//e.Printfln("col.DataType:%s", col.DataType)
+			//tags := splitTag(rdsTagStr)
+			//var (
+			//	isIndex   bool
+			//	isUnique  bool
+			//	indexName string
+			//)
+			//for j, key := range tags {
+			//	keyLower := strings.ToLower(key)
+			//	if keyLower == TagIndex {
+			//		isIndex = true
+			//		indexName = col.Name
+			//	} else if keyLower == TagUniqueIndex {
+			//		isIndex = true
+			//		indexName = col.Name
+			//		isUnique = true
+			//	} else if keyLower == TagDefaultValue {
+			//		if len(tags) > j {
+			//			col.DefaultValue = strings.Trim(tags[j+1], "'")
+			//		}
+			//	} else if keyLower == TagPrimaryKey {
+			//		col.IsPrimaryKey = true
+			//		isIndex = true
+			//		indexName = col.Name
+			//	} else if keyLower == TagAutoIncrement {
+			//		if table.AutoIncrement != "" {
+			//			return nil, Err_MoreThanOneIncrementColumn
+			//		}
+			//		col.IsAutoIncrement = true
+			//	} else if keyLower == TagComment {
+			//		if len(tags) > j {
+			//			col.Comment = strings.Trim(tags[j+1], "'")
+			//		}
+			//	} else if keyLower == TagCreatedAt {
+			//		col.IsCreated = true
+			//	} else if keyLower == TagUpdatedAt {
+			//		col.IsUpdated = true
+			//	} else if keyLower == TagCombinedindex {
+			//		//Done:combined index
+			//		if fieldType.Kind() != reflect.String && fieldType.Kind() != reflect.Int64 {
+			//			return nil, Err_CombinedIndexTypeError
+			//		}
+			//		if len(tags) > j && tags[j+1] != "" {
+			//			isIndex = true
+			//			indexName = tags[j+1]
+			//			col.IsCombinedIndex = true
+			//		}
+			//		continue
+			//	} else if keyLower == TagSync2DB {
+			//		table.IsSync2DB = true
+			//	} else {
+			//		//abondon
+			//	}
+			//}
+			////col.Type = fieldType
+			//table.AddColumn(col)
+			//if isIndex {
+			//	table.AddIndex(fieldType.Kind(), indexName, col.Name, col.Comment, isUnique, col.Seq)
+			//}
 		} else {
 			e.Printfln("MapTable field:%s, not has tag", typ.Field(i).Name)
 		}

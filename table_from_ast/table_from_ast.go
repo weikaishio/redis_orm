@@ -64,7 +64,7 @@ func TableFromAst(fileName string) ([]*redis_orm.Table, error) {
 							}
 						}
 						//todo:field.Type -> reflect.Kind
-						redis_orm.MapTag(table, seq, name, reflect.String, rdsTagStr)
+						redis_orm.MapTableColumnFromTag(table, seq, name, reflect.String, rdsTagStr)
 					}
 				}
 				tableAry = append(tableAry, table)
