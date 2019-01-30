@@ -37,6 +37,8 @@ todo:concurrency safe
 解决方案：
 2、自增（HIncrBy,HIncrByFloat）的原子可靠性
 3、CAS
+
+todo:pipeline
 */
 type Engine struct {
 	redisClient *RedisClientProxy
