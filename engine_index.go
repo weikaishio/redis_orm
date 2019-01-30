@@ -306,7 +306,7 @@ func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value
 	for _, index := range indexsMap {
 		if len(cols) > 0 {
 			if !ColsIsExistIndex(index, cols...) {
-				ixe.engine.Printfln("Update ColsIsExistIndex:%v,cols:%v", index.IndexColumn, cols)
+				//ixe.engine.Printfln("Update ColsIsExistIndex:%v,cols:%v", index.IndexColumn, cols)
 				continue
 			}
 		}
@@ -390,6 +390,7 @@ func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value
 	return nil
 }
 
+//todo:ReBuild single index
 func (ixe *IndexEngine) ReBuild(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
@@ -457,7 +458,10 @@ func (ixe *IndexEngine) ReBuild(bean interface{}) error {
 	}
 	return nil
 }
-
+func (ixe *IndexEngine) DropSingleIndex(dropIndex *Index) error {
+	_, err := ixe.engine.redisClient.Del(dropIndex.NameKey).Result()
+	return err
+}
 func (ixe *IndexEngine) Drop(table *Table, except ...string) error {
 	indexsMap := table.IndexesMap
 	var keys []string

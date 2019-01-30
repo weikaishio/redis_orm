@@ -141,3 +141,47 @@ func SetBoolFromStr(ptr *bool, s string) error {
 	}
 	return err
 }
+
+func Camel2Underline(s string) string {
+	var res []byte
+	length := len(s)
+	for i := 0; i < length; i++ {
+		if s[i] >= 65 && s[i] <= 90 {
+			if i > 0 {
+				res = append(res, 95, s[i]+32)
+			} else {
+				res = append(res, s[i]+32)
+			}
+		} else {
+			res = append(res, s[i])
+		}
+	}
+	return string(res)
+}
+func Underline2Camel(s string) string{
+	var res []byte
+	length := len(s)
+	var isUnderline bool
+	for i := 0; i < length; i++ {
+		if i > 0 {
+			if s[i] == 95 {
+				if isUnderline {
+					res = append(res, 95)
+				}else {
+					isUnderline = true
+				}
+			} else {
+				if isUnderline {
+					isUnderline=false
+					res = append(res, s[i]-32)
+				}else{
+					res = append(res, s[i])
+				}
+			}
+		} else {
+			res = append(res, s[i]-32)
+		}
+
+	}
+	return string(res)
+}

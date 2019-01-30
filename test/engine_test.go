@@ -101,9 +101,18 @@ func init() {
 //	t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
 //}
 
+<<<<<<< HEAD
 func TestEngine_Incr(t *testing.T)  {
 	faq:=models.Faq{
 		Id:1,
+=======
+func TestEngine_Query(t *testing.T) {
+	tableName := "faq"
+	table, has := engine.Schema.GetTableByName(tableName)
+	if !has {
+		t.Logf("GetTableByName(%s),has:%v", tableName, has)
+		return
+>>>>>>> af0e2ad0efe3de1cbfd36b31358c1bc654e825a5
 	}
 	//engine.Schema.CreateTable(faq)
 	err:=engine.GetDefaultValue(faq)

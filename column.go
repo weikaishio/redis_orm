@@ -1,15 +1,16 @@
 package redis_orm
 
 type SchemaColumnsTb struct {
-	Id            int64  `redis_orm:"pk autoincr comment 'ID'"`
-	TableId       int64  `redis_orm:"index comment '表ID'"`
-	Seq           byte   `redis_orm:"comment '列顺序'"`
-	ColumnName    string `redis_orm:"comment '列名'"`
-	ColumnComment string `redis_orm:"dft '' comment '列注释'"`
-	DataType      string `redis_orm:"comment '数据类型'"`
-	DefaultValue  string `redis_orm:"comment '默认值'"`
-	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
-	UpdatedAt     int64  `redis_orm:"updated_at comment '修改时间'"`
+	Id                int64  `redis_orm:"pk autoincr comment 'ID'"`
+	TableId           int64  `redis_orm:"index comment '表ID'"`
+	Seq               byte   `redis_orm:"comment '列顺序'"`
+	ColumnName        string `redis_orm:"comment '列名'"`
+	ColumnComment     string `redis_orm:"dft '' comment '列注释'"`
+	DataType          string `redis_orm:"comment '数据类型'"`
+	DefaultValue      string `redis_orm:"comment '默认值'"`
+	TableIdColumnName string `redis_orm:"combinedindex TableId&ColumnName comment '组合索引(表ID&列名)'"`
+	CreatedAt         int64  `redis_orm:"created_at comment '创建时间'"`
+	UpdatedAt         int64  `redis_orm:"updated_at comment '修改时间'"`
 }
 
 func SchemaColumnsFromColumn(tableId int64, v *Column) *SchemaColumnsTb {
@@ -67,4 +68,17 @@ func ColumnFromSchemaColumns(v *SchemaColumnsTb, schemaTable *SchemaTablesTb) *C
 func NewEmptyColumn(colName string) *Column {
 	return &Column{Name: colName, IsPrimaryKey: false,
 		IsAutoIncrement: false}
+}
+
+type ColumnsModel []*Column
+
+func (c ColumnsModel) Len() int {
+	return len(c)
+}
+
+func (c ColumnsModel) Less(i, j int) bool {
+	return c[i].Seq < c[j].Seq
+}
+func (c ColumnsModel) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
 }

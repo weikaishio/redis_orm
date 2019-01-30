@@ -654,7 +654,11 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 				e.Printfln("UpdateMulti Update(%s) err:%v", table.Name, err)
 			}
 			if e.isSync2DB && table.IsSync2DB {
-				e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, cols, fmt.Sprintf("id=%d", pkInt))
+				var colsDb []string
+				for _, col := range cols {
+					colsDb = append(colsDb, Camel2Underline(col))
+				}
+				e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, colsDb, fmt.Sprintf("id=%d", pkInt))
 			}
 		}
 	}
@@ -702,7 +706,7 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 		if e.isSync2DB && table.IsSync2DB {
 			colValue := reflectVal.FieldByName(col)
 			colValue.SetInt(res)
-			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{col}, fmt.Sprintf("id=%d", pkInt))
+			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{Camel2Underline(col)}, fmt.Sprintf("id=%d", pkInt))
 		}
 	}
 	return res, err
@@ -825,7 +829,11 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 			e.Printfln("Update Update(%s) err:%v", table.Name, err)
 		}
 		if e.isSync2DB && table.IsSync2DB {
-			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, cols, fmt.Sprintf("id=%d", pkOldId))
+			var colsDb []string
+			for _, col := range cols {
+				colsDb = append(colsDb, Camel2Underline(col))
+			}
+			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, colsDb, fmt.Sprintf("id=%d", pkOldId))
 		}
 	}
 	return err
