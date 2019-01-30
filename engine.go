@@ -149,12 +149,75 @@ func (e *Engine) GetTableByReflect(beanValue, beanIndirectValue reflect.Value) (
 func GetFieldName(pkId interface{}, colName string) string {
 	return fmt.Sprintf("%v_%s", pkId, colName)
 }
+func MapTag(table *Table, seq int, columnName string, columnType reflect.Kind, rdsTagStr string) error {
+	col := NewEmptyColumn(columnName)
+	col.Seq = byte(seq)
+	col.DataType = columnType.String()
+	tags := splitTag(rdsTagStr)
+	var (
+		isIndex   bool
+		isUnique  bool
+		indexName string
+	)
+	for j, key := range tags {
+		keyLower := strings.ToLower(key)
+		if keyLower == TagIndex {
+			isIndex = true
+			indexName = col.Name
+		} else if keyLower == TagUniqueIndex {
+			isIndex = true
+			indexName = col.Name
+			isUnique = true
+		} else if keyLower == TagDefaultValue {
+			if len(tags) > j {
+				col.DefaultValue = strings.Trim(tags[j+1], "'")
+			}
+		} else if keyLower == TagPrimaryKey {
+			col.IsPrimaryKey = true
+			isIndex = true
+			indexName = col.Name
+		} else if keyLower == TagAutoIncrement {
+			if table.AutoIncrement != "" {
+				return Err_MoreThanOneIncrementColumn
+			}
+			col.IsAutoIncrement = true
+		} else if keyLower == TagComment {
+			if len(tags) > j {
+				col.Comment = strings.Trim(tags[j+1], "'")
+			}
+		} else if keyLower == TagCreatedAt {
+			col.IsCreated = true
+		} else if keyLower == TagUpdatedAt {
+			col.IsUpdated = true
+		} else if keyLower == TagCombinedindex {
+			//Done:combined index
+			if columnType != reflect.String && columnType != reflect.Int64 {
+				return Err_CombinedIndexTypeError
+			}
+			if len(tags) > j && tags[j+1] != "" {
+				isIndex = true
+				indexName = tags[j+1]
+				col.IsCombinedIndex = true
+			}
+			continue
+		} else if keyLower == TagSync2DB {
+			table.IsSync2DB = true
+		} else {
+			//abondon
+		}
+	}
+	table.AddColumn(col)
+	if isIndex {
+		table.AddIndex(columnType, indexName, col.Name, col.Comment, isUnique, col.Seq)
+	}
+	return nil
+}
 func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 	typ := v.Type()
 	table := NewEmptyTable()
 	//table.Type = typ
 	table.Name = strings.ToLower(e.TableName(v))
-	table.Comment=Camel2Underline(e.TableName(v))
+	table.Comment = Camel2Underline(e.TableName(v))
 	//ptr or struct:typ.NumField()
 	for i := 0; i < typ.NumField(); i++ {
 		tag := typ.Field(i).Tag
@@ -225,7 +288,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 			//col.Type = fieldType
 			table.AddColumn(col)
 			if isIndex {
-				table.AddIndex(fieldType, indexName, col.Name, col.Comment, isUnique, col.Seq)
+				table.AddIndex(fieldType.Kind(), indexName, col.Name, col.Comment, isUnique, col.Seq)
 			}
 		} else {
 			e.Printfln("MapTable field:%s, not has tag", typ.Field(i).Name)

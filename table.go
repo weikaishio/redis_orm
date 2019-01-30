@@ -99,9 +99,9 @@ func (table *Table) GetAutoIncrKey() string {
 func (table *Table) GetTableKey() string {
 	return fmt.Sprintf("%s%s", KeyTbPrefix, strings.ToLower(table.Name))
 }
-func (table *Table) AddIndex(typ reflect.Type, indexColumn, columnName, comment string, isUnique bool, seq byte) {
+func (table *Table) AddIndex(typ reflect.Kind, indexColumn, columnName, comment string, isUnique bool, seq byte) {
 	var indexType IndexType
-	switch typ.Kind() {
+	switch typ {
 	case reflect.String:
 		indexType = IndexType_IdScore
 
