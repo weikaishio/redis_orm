@@ -61,7 +61,7 @@ func TestEngine_Insert(t *testing.T) {
 	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
 	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
 	//engine.Schema.TableDrop(models.Faq{})
-	//engine.Schema.CreateTable(models.Faq{})
+	engine.Schema.CreateTable(models.Faq{})
 	//t.Logf("tables:%v", engine.Tables)
 	//engine.TableTruncate(&models.FaqTb{})
 	for _, table := range engine.Tables {

@@ -1,7 +1,6 @@
 package table_from_ast
 
 import (
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -9,20 +8,24 @@ import (
 	"reflect"
 	"strings"
 
+	"encoding/json"
 	"github.com/weikaishio/redis_orm"
 )
 
+/*
+https://www.golang123.com/topic/1254
+*/
 func TableFromAst(fileName string) ([]*redis_orm.Table, error) {
 	fileSet := token.NewFileSet()
 	astF, err := parser.ParseFile(fileSet, fileName, nil, parser.ParseComments)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ParseFile err:%v", err)
 	}
 	var tableAry []*redis_orm.Table
 	for _, decl := range astF.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("invalid decl: %T", decl))
+			return nil, fmt.Errorf("invalid decl: %T", decl)
 		}
 		for _, ispec := range genDecl.Specs {
 			switch spec := ispec.(type) {
@@ -63,8 +66,17 @@ func TableFromAst(fileName string) ([]*redis_orm.Table, error) {
 								rdsTagStr = tmpStrs[0]
 							}
 						}
-						//todo:field.Type -> reflect.Kind
-						redis_orm.MapTableColumnFromTag(table, seq, name, reflect.String, rdsTagStr)
+						//Done:field.Type -> reflect.Kind
+						fmt.Printf("field.Type:%T,%s\n", field.Type, redis_orm.ToString(field.Type))
+						fieldTypeStr := redis_orm.ToString(field.Type)
+						var identObj ast.Ident
+						err = json.Unmarshal([]byte(fieldTypeStr), &identObj)
+						if err != nil {
+							fmt.Printf("identObj unmarshal err:%v\n", err)
+							continue
+						}
+
+						redis_orm.MapTableColumnFromTag(table, seq, name, identObj.Name, rdsTagStr)
 					}
 				}
 				tableAry = append(tableAry, table)

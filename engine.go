@@ -149,10 +149,10 @@ func (e *Engine) GetTableByReflect(beanValue, beanIndirectValue reflect.Value) (
 func GetFieldName(pkId interface{}, colName string) string {
 	return fmt.Sprintf("%v_%s", pkId, colName)
 }
-func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType reflect.Kind, rdsTagStr string) error {
+func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType string, rdsTagStr string) error {
 	col := NewEmptyColumn(columnName)
 	col.Seq = byte(seq)
-	col.DataType = columnType.String()
+	col.DataType = columnType
 	tags := splitTag(rdsTagStr)
 	var (
 		isIndex   bool
@@ -191,7 +191,7 @@ func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType 
 			col.IsUpdated = true
 		} else if keyLower == TagCombinedindex {
 			//Done:combined index
-			if columnType != reflect.String && columnType != reflect.Int64 {
+			if columnType != reflect.String.String() && columnType != reflect.Int64.String() {
 				return Err_CombinedIndexTypeError
 			}
 			if len(tags) > j && tags[j+1] != "" {
@@ -228,7 +228,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 		fieldType := fieldValue.Type()
 
 		if rdsTagStr != "" {
-			err := MapTableColumnFromTag(table, i, typ.Field(i).Name, fieldType.Kind(), rdsTagStr)
+			err := MapTableColumnFromTag(table, i, typ.Field(i).Name, fieldType.Kind().String(), rdsTagStr)
 			if err != nil {
 				return table, err
 			}

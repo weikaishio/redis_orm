@@ -99,22 +99,22 @@ func (table *Table) GetAutoIncrKey() string {
 func (table *Table) GetTableKey() string {
 	return fmt.Sprintf("%s%s", KeyTbPrefix, strings.ToLower(table.Name))
 }
-func (table *Table) AddIndex(typ reflect.Kind, indexColumn, columnName, comment string, isUnique bool, seq byte) {
+func (table *Table) AddIndex(typ string, indexColumn, columnName, comment string, isUnique bool, seq byte) {
 	var indexType IndexType
 	switch typ {
-	case reflect.String:
+	case reflect.String.String():
 		indexType = IndexType_IdScore
 
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
+	case reflect.Int.String(), reflect.Int8.String(), reflect.Int16.String(), reflect.Int32.String(), reflect.Int64.String(), reflect.Uint.String(), reflect.Uint8.String():
 		fallthrough
-	case reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+	case reflect.Uint16.String(), reflect.Uint32.String(), reflect.Uint64.String(), reflect.Float32.String(), reflect.Float64.String():
 		indexType = IndexType_IdMember
 
-	case reflect.Uintptr, reflect.Ptr:
+	case reflect.Uintptr.String(), reflect.Ptr.String():
 		fallthrough
-	case reflect.Complex64, reflect.Complex128, reflect.Array, reflect.Chan, reflect.Interface, reflect.Map:
+	case reflect.Complex64.String(), reflect.Complex128.String(), reflect.Array.String(), reflect.Chan.String(), reflect.Interface.String(), reflect.Map.String():
 		fallthrough
-	case reflect.Slice, reflect.Struct, reflect.Bool, reflect.UnsafePointer:
+	case reflect.Slice.String(), reflect.Struct.String(), reflect.Bool.String(), reflect.UnsafePointer.String():
 		fallthrough
 	default:
 		indexType = IndexType_UnSupport
