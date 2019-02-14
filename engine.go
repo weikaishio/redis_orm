@@ -176,6 +176,9 @@ func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType 
 			col.IsPrimaryKey = true
 			isIndex = true
 			indexName = col.Name
+			if col.DataType!="int64" {
+				return Err_PrimaryKeyTypeInvalid
+			}
 		} else if keyLower == TagAutoIncrement {
 			if table.AutoIncrement != "" {
 				return Err_MoreThanOneIncrementColumn
@@ -231,6 +234,9 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 			err := MapTableColumnFromTag(table, i, typ.Field(i).Name, fieldType.Kind().String(), rdsTagStr)
 			if err != nil {
 				return table, err
+			}
+			if table.PrimaryKey == "" {
+				return table, Err_PrimaryKeyNotFound
 			}
 			//col = NewEmptyColumn(typ.Field(i).Name)
 			//col.Seq = byte(i)

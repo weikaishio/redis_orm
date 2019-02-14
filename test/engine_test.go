@@ -1,12 +1,11 @@
 package test
 
 import (
-	"github.com/go-redis/redis"
+		"github.com/go-redis/redis"
 	"github.com/weikaishio/redis_orm"
-	"testing"
+		"testing"
 	"github.com/weikaishio/redis_orm/example/models"
 	"encoding/json"
-	"strings"
 )
 
 var (
@@ -61,46 +60,55 @@ func TestEngine_Insert(t *testing.T) {
 	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
 	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
 	//engine.Schema.TableDrop(models.Faq{})
-	engine.Schema.CreateTable(models.Faq{})
+	//engine.Schema.TableDrop(&models.FaqTestTb{})
+	//engine.Schema.TableTruncate(&models.FaqTestTb{})
+	err := engine.Schema.CreateTable(&models.FaqTestTb{})
+	if err != nil {
+		t.Logf("CreateTable err:%v", err)
+	}
+	err = engine.Insert(&models.FaqTestTb{Fid: 101, Title: "title1", Content: "content"})
+	if err != nil {
+		t.Logf("Insert err:%v", err)
+	}
 	//t.Logf("tables:%v", engine.Tables)
 	//engine.TableTruncate(&models.FaqTb{})
-	for _, table := range engine.Tables {
-		if strings.Contains(redis_orm.NeedMapTable, table.Name) {
-			continue
-		}
-		t.Logf("table:%v", *table)
-		for key, column := range table.ColumnsMap {
-			t.Logf("column:%s,%v", key, column)
-		}
-		for key, index := range table.IndexesMap {
-			t.Logf("index:%s,%v", key, index)
-		}
-	}
-	ary := make([]interface{}, 0)
-	faq := models.Faq{
-		Title:  "index3",
-		Unique: 3,
-		Hearts: 1,
-	}
-	engine.Schema.CreateTable(faq)
-	ary = append(ary, faq)
-	faq = models.Faq{
-		Title:  "index4",
-		Unique: 4,
-		Hearts: 2,
-	}
-	ary = append(ary, faq)
-	//for i := 4000; i < 10000; i++ {
-	//	faq = &models.Faq{
-	//		Title:  fmt.Sprintf("index%d", i),
-	//		Unique: int64(i),
-	//		Hearts: i,
+	//for _, table := range engine.Tables {
+	//	if strings.Contains(redis_orm.NeedMapTable, table.Name) {
+	//		continue
 	//	}
-	//	ary = append(ary, faq)
+	//	t.Logf("table:%v", *table)
+	//	for key, column := range table.ColumnsMap {
+	//		t.Logf("column:%s,%v", key, column)
+	//	}
+	//	for key, index := range table.IndexesMap {
+	//		t.Logf("index:%s,%v", key, index)
+	//	}
 	//}
-	affected, err := engine.InsertMulti(ary...)
-	bys, _ := json.Marshal(faq)
-	t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
+	//ary := make([]interface{}, 0)
+	//faq := models.Faq{
+	//	Title:  "index3",
+	//	Unique: 3,
+	//	Hearts: 1,
+	//}
+	//engine.Schema.CreateTable(faq)
+	//ary = append(ary, faq)
+	//faq = models.Faq{
+	//	Title:  "index4",
+	//	Unique: 4,
+	//	Hearts: 2,
+	//}
+	//ary = append(ary, faq)
+	////for i := 4000; i < 10000; i++ {
+	////	faq = &models.Faq{
+	////		Title:  fmt.Sprintf("index%d", i),
+	////		Unique: int64(i),
+	////		Hearts: i,
+	////	}
+	////	ary = append(ary, faq)
+	////}
+	//affected, err := engine.InsertMulti(ary...)
+	//bys, _ := json.Marshal(faq)
+	//t.Logf("InsertMulti faq:%v,affected:%d,err:%v", string(bys), affected, err)
 }
 
 //func TestEngine_Incr(t *testing.T) {
@@ -150,8 +158,8 @@ func TestEngine_Insert(t *testing.T) {
 //}
 
 func TestEngine_Get(t *testing.T) {
-	faq :=&models.Faq{
-		Id: 2,
+	faq := &models.FaqTestTb{
+		Fid: 101,
 	}
 	has, err := engine.Get(faq)
 	bys, _ := json.Marshal(faq)

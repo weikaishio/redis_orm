@@ -13,7 +13,8 @@ import (
 )
 
 /*
-https://www.golang123.com/topic/1254
+https://studygolang.com/articles/6709
+https://github.com/yuroyoro/goast-viewer
 */
 func TableFromAst(fileName string) ([]*redis_orm.Table, error) {
 	fileSet := token.NewFileSet()

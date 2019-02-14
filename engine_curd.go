@@ -509,6 +509,9 @@ func (e *Engine) Insert(bean interface{}) error {
 		if err != nil {
 			return err
 		}
+	}else{
+		colValue := reflectVal.FieldByName(table.PrimaryKey)
+		lastId=colValue.Int()
 	}
 
 	valMap := make(map[string]interface{})
