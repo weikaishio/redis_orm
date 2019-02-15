@@ -205,6 +205,9 @@ func (e *Engine) TableFromBeanAryReflect(beanAry interface{}) (*Table, error) {
 	return table, nil
 }
 func (e *Engine) FileterCols(table *Table, cols ...string) []string {
+	if len(cols)==0 {
+		return table.ColumnsSeq
+	}
 filterCols:
 	for i, col := range cols {
 		_, isExist := table.ColumnsMap[col]
