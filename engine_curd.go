@@ -205,7 +205,7 @@ func (e *Engine) TableFromBeanAryReflect(beanAry interface{}) (*Table, error) {
 	return table, nil
 }
 func (e *Engine) FileterCols(table *Table, cols ...string) []string {
-	if len(cols)==0 {
+	if len(cols) == 0 {
 		return table.ColumnsSeq
 	}
 filterCols:
@@ -512,9 +512,9 @@ func (e *Engine) Insert(bean interface{}) error {
 		if err != nil {
 			return err
 		}
-	}else{
+	} else {
 		colValue := reflectVal.FieldByName(table.PrimaryKey)
-		lastId=colValue.Int()
+		lastId = colValue.Int()
 	}
 
 	valMap := make(map[string]interface{})
@@ -707,7 +707,7 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	}
 	reflectVal := reflect.Indirect(beanValue)
 
-	e.Printfln("incr:%v,%v",beanValue,reflectVal)
+	e.Printfln("incr:%v,%v", beanValue, reflectVal)
 	table, has := e.GetTableByName(e.TableName(reflectVal))
 	if !has {
 		return 0, ERR_UnKnowTable

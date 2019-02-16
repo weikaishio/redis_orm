@@ -181,7 +181,7 @@ func (s *SchemaEngine) RemoveColumn(bean interface{}, cols ...string) error {
 			s.Printfln("RemoveColumn(%s) col:%s, not exist", table.Name, col)
 			continue
 		}
-		_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(table.TableId, col, "ColumnName"))
+		_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(col, col, "ColumnName"))
 		if err != nil {
 			return err
 		} else {
@@ -263,7 +263,7 @@ func (s *SchemaEngine) RemoveIndex(bean interface{}, cols ...string) error {
 			s.Printfln("AddIndex(%s) index:%s, not exist", table.Name, col)
 			continue
 		}
-		_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(table.TableId, col, "IndexName"))
+		_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(col, col, "IndexName"))
 		if err != nil {
 			return err
 		} else {
