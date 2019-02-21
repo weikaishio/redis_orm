@@ -417,6 +417,9 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 				e.Printfln("HIncrBy(%v,%v) err:%v", table.GetTableKey(), table.GetAutoIncrKey(), err)
 				continue
 			}
+		}else {
+			colValue := reflectVal.FieldByName(table.PrimaryKey)
+			lastId = colValue.Int()
 		}
 		for colName, col := range table.ColumnsMap {
 			fieldName := GetFieldName(lastId, colName)

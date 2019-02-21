@@ -290,6 +290,83 @@ func (ixe *IndexEngine) IsExistData(table *Table, beanValue, reflectVal reflect.
 	}
 	return 0, nil
 }
+func (ixe *IndexEngine) IsExistDataByMap(table *Table, valMap map[string]string) (int64, error) {
+	var cols []string
+	for k, _ := range valMap {
+		cols = append(cols, k)
+	}
+
+	indexsMap := table.IndexesMap
+	for _, index := range indexsMap {
+		if len(cols) > 0 {
+			if !ColsIsExistIndex(index, cols...) {
+				continue
+			}
+		}
+
+		var fieldValueAry []string
+		for _, column := range index.IndexColumn {
+			if fieldValue, ok := valMap[column]; ok {
+				fieldValueAry = append(fieldValueAry, fieldValue)
+			}
+		}
+		switch index.Type {
+		case IndexType_IdMember:
+			if !index.IsUnique && index.NameKey != table.GetIndexKey(table.PrimaryKey) {
+				ixe.engine.Printfln("!index.IsUnique break")
+				break
+			}
+			if len(index.IndexColumn) > 2 {
+				return 0, Err_CombinedIndexColCountOver
+			}
+			var score int64
+			SetInt64FromStr(&score, fieldValueAry[0])
+
+			if len(fieldValueAry) == 2 {
+				score = score << 32
+				var subScore int32
+				SetInt32FromStr(&subScore, fieldValueAry[1])
+				score = score | int64(subScore)
+			}
+			zRangeBy := redis.ZRangeBy{
+				Min:    ToString(score),
+				Max:    ToString(score),
+				Offset: 0,
+				Count:  1,
+			}
+			val, err := ixe.engine.redisClient.ZRangeByScore(index.NameKey, zRangeBy).Result()
+			if err != nil {
+				ixe.engine.Printfln("IsExistData ZRangeByScore%s:%v,err:%v", index.NameKey, score, err)
+				return 0, err
+			} else if len(val) > 0 {
+				var pkOldId int64
+				SetInt64FromStr(&pkOldId, val[0])
+				if pkOldId > 0 {
+					return pkOldId, nil
+				}
+			}
+		case IndexType_IdScore:
+			var members []string
+			for _, fieldValue := range fieldValueAry {
+				members = append(members, fieldValue)
+
+			}
+			pkOldId, err := ixe.engine.redisClient.ZScore(index.NameKey, strings.Join(members, "&")).Result()
+			if err != nil && err.Error() != redis.Nil.Error() {
+				ixe.engine.Printfln("IsExistData %s:%v,err:%v", index.NameKey, strings.Join(members, "&"), err)
+				return 0, err
+			} else {
+				ixe.engine.Printfln("ZScore(%s,%s) pkOldId:%d", index.NameKey, strings.Join(members, "&"), int64(pkOldId))
+				if int64(pkOldId) > 0 {
+					return int64(pkOldId), nil
+				}
+			}
+		case IndexType_UnSupport:
+			ixe.engine.Printfln("IsExistData unsupport index type")
+		}
+	}
+	return 0, nil
+}
 
 //todo: no thread safety! watch?
 func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value, cols ...string) error {
@@ -377,6 +454,74 @@ func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value
 			redisZ := redis.Z{
 				Member: strings.Join(members, "&"),
 				Score:  float64(pkFieldValue.Int()),
+			}
+			_, err = ixe.engine.redisClient.ZAdd(index.NameKey, redisZ).Result()
+			if err != nil {
+				ixe.engine.Printfln("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
+				return err
+			}
+		case IndexType_UnSupport:
+			ixe.engine.Printfln("IndexUpdate unsupport index type")
+		}
+	}
+	return nil
+}
+
+func (ixe *IndexEngine) UpdateByMap(table *Table, pkInt int64, valMap map[string]string) error {
+	var cols []string
+	for k, _ := range valMap {
+		cols = append(cols, k)
+	}
+
+	indexsMap := table.IndexesMap
+	for _, index := range indexsMap {
+		if len(cols) > 0 {
+			if !ColsIsExistIndex(index, cols...) {
+				continue
+			}
+		}
+		var fieldValueAry []string
+		for _, column := range index.IndexColumn {
+			if fieldValue, ok := valMap[column]; ok {
+				fieldValueAry = append(fieldValueAry, fieldValue)
+			}
+		}
+		switch index.Type {
+		case IndexType_IdMember:
+			if len(index.IndexColumn) > 2 {
+				return Err_CombinedIndexColCountOver
+			}
+			var score int64
+			SetInt64FromStr(&score, fieldValueAry[0])
+
+			if len(fieldValueAry) == 2 {
+				score = score << 32
+				var subScore int32
+				SetInt32FromStr(&subScore, fieldValueAry[1])
+				score = score | int64(subScore)
+			}
+			redisZ := redis.Z{
+				Member: pkInt,
+				Score:  float64(score), //todo:浮点数有诡异问题
+			}
+			_, err := ixe.engine.redisClient.ZAdd(index.NameKey, redisZ).Result()
+			if err != nil {
+				ixe.engine.Printfln("IndexUpdate %s:%v,err:%v", index.NameKey, redisZ, err)
+				return err
+			}
+		case IndexType_IdScore:
+			_, err := ixe.engine.redisClient.ZRemRangeByScores(index.NameKey, ToString(pkInt), ToString(pkInt)).Result()
+			if err != nil {
+				ixe.engine.Printfln("IndexUpdate ZRemRangeByScores %s:%v,err:%v", index.NameKey, ToString(pkInt), err)
+				return err
+			}
+			var members []string
+			for _, fieldValue := range fieldValueAry {
+				members = append(members, fieldValue)
+			}
+			redisZ := redis.Z{
+				Member: strings.Join(members, "&"),
+				Score:  float64(pkInt),
 			}
 			_, err = ixe.engine.redisClient.ZAdd(index.NameKey, redisZ).Result()
 			if err != nil {
