@@ -27,7 +27,7 @@ func (e *Engine) UpdateByMap(table *Table, columnValMap map[string]string) error
 	var cols []string
 	for col, _ := range columnValMap {
 		_, isExist := table.ColumnsMap[col]
-		if !isExist {
+		if isExist {
 			cols = append(cols, col)
 		}
 	}
@@ -110,7 +110,7 @@ func (e *Engine) InsertByMap(table *Table, columnValMap map[string]string) error
 	var cols []string
 	for col, _ := range columnValMap {
 		_, isExist := table.ColumnsMap[col]
-		if !isExist {
+		if isExist {
 			cols = append(cols, col)
 		}
 	}

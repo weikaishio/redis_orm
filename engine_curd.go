@@ -981,6 +981,9 @@ func (e *Engine) TableTruncate(bean interface{}) error {
 	if !has {
 		return ERR_UnKnowTable
 	}
+	return e.TableTruncateByTable(table)
+}
+func (e *Engine) TableTruncateByTable(table *Table) error {
 	_, err := e.redisClient.Del(table.GetTableKey()).Result()
 	if err != nil {
 		return err
