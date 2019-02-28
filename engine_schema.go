@@ -2,6 +2,7 @@ package redis_orm
 
 import (
 	"github.com/weikaishio/distributed_lib/redis_pubsub"
+	"fmt"
 	"math"
 	"reflect"
 	"strings"
@@ -193,7 +194,7 @@ func (s *SchemaEngine) RemoveColumn(bean interface{}, cols ...string) error {
 			s.Printfln("RemoveColumn(%s) col:%s, not exist", table.Name, col)
 			continue
 		}
-		_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(col, col, "ColumnName"))
+		_, err = s.DeleteByCondition(&SchemaColumnsTb{}, NewSearchConditionV2(fmt.Sprintf("%d&%s", table.TableId, col), fmt.Sprintf("%d&%s", table.TableId, col), "TableId", "ColumnName"))
 		if err != nil {
 			return err
 		} else {
@@ -277,7 +278,7 @@ func (s *SchemaEngine) RemoveIndex(bean interface{}, cols ...string) error {
 			s.Printfln("AddIndex(%s) index:%s, not exist", table.Name, col)
 			continue
 		}
-		_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(col, col, "IndexName"))
+		_, err = s.DeleteByCondition(&SchemaIndexsTb{}, NewSearchConditionV2(fmt.Sprintf("%d&%s", table.TableId, col), fmt.Sprintf("%d&%s", table.TableId, col), "TableId", "IndexName"))
 		if err != nil {
 			return err
 		} else {
@@ -295,16 +296,7 @@ func (s *SchemaEngine) RemoveIndex(bean interface{}, cols ...string) error {
 	}
 	return nil
 }
-func (s *SchemaEngine) TableDrop(bean interface{}) error {
-	beanValue := reflect.ValueOf(bean)
-	beanIndirectValue := reflect.Indirect(beanValue)
-
-	table, has := s.GetTableByName(s.TableName(beanIndirectValue))
-	if !has {
-		return ERR_UnKnowTable
-	}
-
-	//tablesTb := SchemaTablesFromTable(table)
+func (s *SchemaEngine) TableDrop(table *Table) error {
 	affectedRow, err := s.DeleteByCondition(&SchemaTablesTb{}, NewSearchConditionV2(table.Name, table.Name, "TableName"))
 	if err != nil {
 		s.Printfln("Delete Table err:%v", err)

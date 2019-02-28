@@ -1,11 +1,11 @@
 package test
 
 import (
-		"github.com/go-redis/redis"
-	"github.com/weikaishio/redis_orm"
-		"testing"
-	"github.com/weikaishio/redis_orm/example/models"
 	"encoding/json"
+	"github.com/go-redis/redis"
+	"github.com/weikaishio/redis_orm"
+	"github.com/weikaishio/redis_orm/example/models"
+		"testing"
 )
 
 var (
@@ -228,9 +228,18 @@ func TestEngine_Get(t *testing.T) {
 //
 //func TestEngine_TableDrop(t *testing.T) {
 //	faq := &models.Faq{}
-//	err := engine.Schema.TableDrop(faq)
+//	beanValue := reflect.ValueOf(faq)
+//	beanIndirectValue := reflect.Indirect(beanValue)
+//
+//	table, has := engine.GetTableByName(engine.TableName(beanIndirectValue))
+//	if !has {
+//		t.Logf("GetTableByName !has")
+//		return
+//	}
+//	err := engine.Schema.TableDrop(table)
 //	t.Logf("TestEngine_TableDrop err:%v", err)
 //}
+
 //func TestEngine_DeleteMulti(t *testing.T) {
 //	faq := &models.Faq{
 //		Title: "test51",

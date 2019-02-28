@@ -484,6 +484,8 @@ func (ixe *IndexEngine) UpdateByMap(table *Table, pkInt int64, valMap map[string
 		for _, column := range index.IndexColumn {
 			if fieldValue, ok := valMap[column]; ok {
 				fieldValueAry = append(fieldValueAry, fieldValue)
+			}else{
+				return Err_FieldValueInvalid
 			}
 		}
 		switch index.Type {
@@ -544,7 +546,67 @@ func (ixe *IndexEngine) ReBuild(bean interface{}) error {
 	if !has {
 		return ERR_UnKnowTable
 	}
+	return ixe.ReBuildByTable(table)
+	//ixe.Drop(table, table.PrimaryKey)
+	//
+	//var offset int64 = 0
+	//var limit int64 = 100
+	//
+	//searchCon := NewSearchCondition(IndexType_IdMember, ScoreMin, ScoreMax, table.PrimaryKey)
+	//for {
+	//	idAry, err := ixe.Range(table, searchCon, offset, limit)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if len(idAry) == 0 {
+	//		break
+	//	} else {
+	//		offset += limit
+	//	}
+	//
+	//	fields := make([]string, 0)
+	//	for _, id := range idAry {
+	//		for _, colName := range table.ColumnsSeq {
+	//			fieldName := GetFieldName(id, colName)
+	//			fields = append(fields, fieldName)
+	//		}
+	//	}
+	//	valAry, err := ixe.engine.redisClient.HMGet(table.GetTableKey(), fields...).Result()
+	//	if err != nil {
+	//		return err
+	//	} else if valAry == nil {
+	//		break
+	//	}
+	//	if len(fields) != len(valAry) {
+	//		return Err_FieldValueInvalid
+	//	}
+	//	sliceElementType := reflect.TypeOf(bean).Elem()
+	//	for i := 0; i < len(fields); i += len(table.ColumnsSeq) {
+	//		newBeanValue := reflect.New(sliceElementType)
+	//		reflectElemVal := reflect.Indirect(newBeanValue)
+	//		for j, colName := range table.ColumnsSeq {
+	//			if valAry[i+j] == nil && colName == table.PrimaryKey {
+	//				break
+	//			}
+	//			if valAry[i+j] == nil {
+	//				continue
+	//			}
+	//			colValue := reflectElemVal.FieldByName(colName)
+	//			SetValue(valAry[i+j], &colValue)
+	//		}
+	//		err = ixe.Update(table, newBeanValue, reflect.Indirect(newBeanValue))
+	//		if err != nil {
+	//			ixe.engine.Printfln("indexReBuild Update(%v) err:%v", newBeanValue, err)
+	//		}
+	//	}
+	//	if len(idAry) < int(limit) {
+	//		break
+	//	}
+	//}
+	//return nil
+}
 
+func (ixe *IndexEngine) ReBuildByTable(table *Table) error {
 	ixe.Drop(table, table.PrimaryKey)
 
 	var offset int64 = 0
@@ -578,23 +640,42 @@ func (ixe *IndexEngine) ReBuild(bean interface{}) error {
 		if len(fields) != len(valAry) {
 			return Err_FieldValueInvalid
 		}
-		sliceElementType := reflect.TypeOf(bean).Elem()
 		for i := 0; i < len(fields); i += len(table.ColumnsSeq) {
-			newBeanValue := reflect.New(sliceElementType)
-			reflectElemVal := reflect.Indirect(newBeanValue)
+			valMap := make(map[string]string)
+			var pkInt int64
+			fieldWithPkId:=strings.Split(fields[i],"_")
+			if len(fieldWithPkId)==2 {
+				SetInt64FromStr(&pkInt, fieldWithPkId[0])
+			}
 			for j, colName := range table.ColumnsSeq {
-				if valAry[i+j] == nil && colName == table.PrimaryKey {
+				val := valAry[i+j]
+				if val == nil && colName == table.PrimaryKey {
+					ixe.engine.Printfln("table.PrimaryKey:%s val is nil",colName)
 					break
 				}
-				if valAry[i+j] == nil {
+				if val == nil {
 					continue
 				}
-				colValue := reflectElemVal.FieldByName(colName)
-				SetValue(valAry[i+j], &colValue)
+
+				col, ok := table.ColumnsMap[colName]
+				if !ok {
+					continue
+				}
+				if col.IsCombinedIndex {
+					continue
+				} else if col.IsPrimaryKey {
+					continue
+				}
+				//fieldName := GetFieldName(pkInt, colName)
+				if valAry[i+j] != nil {
+					valMap[colName] = ToString(valAry[i+j])
+				} else {
+					valMap[colName] = col.DefaultValue
+				}
 			}
-			err = ixe.Update(table, newBeanValue, reflect.Indirect(newBeanValue))
+			err = ixe.UpdateByMap(table, pkInt, valMap)
 			if err != nil {
-				ixe.engine.Printfln("indexReBuild Update(%v) err:%v", newBeanValue, err)
+				ixe.engine.Printfln("indexReBuild Update(%d,%v) err:%v", pkInt, valMap, err)
 			}
 		}
 		if len(idAry) < int(limit) {
