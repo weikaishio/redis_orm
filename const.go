@@ -47,7 +47,8 @@ const (
 	ScoreMax = "+inf"
 	ScoreMin = "-inf"
 
-	NeedMapTable = "schematablestb,schemacolumnstb,schemaindexstb"
+	NeedMapTable                  = "schematablestb,schemacolumnstb,schemaindexstb"
+	ChannelSchemaChangedSubscribe = "channel_schema_change"
 )
 
 var (

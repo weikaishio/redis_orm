@@ -2,6 +2,7 @@ package redis_orm
 
 import (
 	"fmt"
+	"github.com/weikaishio/distributed_lib/redis_pubsub"
 	"math"
 	"reflect"
 	"strings"
@@ -13,9 +14,9 @@ todo:DB隔离, DB如何兼容已有的Table，暂不用吧，redis有自己的DB
 
 Done:存表、字段、索引结构
 
-todo:逆向生成模型
+Done:逆向生成表Table模型
 
-todo:改表结构？需要存一个版本号~ pub/sub, 修改了表结构需要reload table, schemaTable -> mapTable
+Done:改表结构？ pub/sub, 修改了表结构需要reload table, schemaTable -> mapTable
 增加，修改，删除字段，有索引的会自动删除索引
 增加，修改，删除索引，重建索引
 
@@ -35,10 +36,19 @@ func NewSchemaEngine(e *Engine) *SchemaEngine {
 		beanIndirectValue := reflect.Indirect(beanValue)
 		schemaEngine.GetTableByReflect(beanValue, beanIndirectValue)
 	}
+
+	redis_pubsub.SharedRdsSubscribMsgInstance().Set(e.redisClient.redisClient)
+	redis_pubsub.SharedRdsSubscribMsgInstance().AddSubscribe(ChannelSchemaChangedSubscribe, schemaEngine.onRevMsg)
+	go redis_pubsub.SharedRdsSubscribMsgInstance().StartSubscription()
 	return schemaEngine
 }
 
+func (s *SchemaEngine) onRevMsg(msg interface{}) {
+	tableName := ToString(msg)
+	s.ReloadTable(tableName)
+}
 func (s *SchemaEngine) CreateTableByTable(table *Table) error {
+
 	tablesTb := SchemaTablesFromTable(table)
 	err := s.Insert(tablesTb)
 	if err != nil {
@@ -91,14 +101,10 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 	if err != nil {
 		return err
 	}
-	//if table != nil {
-	//	s.tablesMutex.Lock()
-	//	s.Tables[table.Name] = table
-	//	s.tablesMutex.Unlock()
-	//}
 
-	err = s.CreateTable(table)
+	err = s.CreateTableByTable(table)
 	if err == nil && s.isSync2DB && table.IsSync2DB {
+		redis_pubsub.SharedRdsSubscribMsgInstance().Publish(ChannelSchemaChangedSubscribe, table.Name)
 		s.syncDB.Create2DB(bean)
 	}
 	return err
@@ -160,6 +166,7 @@ func (s *SchemaEngine) AddColumn(bean interface{}, cols ...string) error {
 
 	if isNeedRefreshTable {
 		s.ReloadTable(table.Name)
+		redis_pubsub.SharedRdsSubscribMsgInstance().Publish(ChannelSchemaChangedSubscribe, table.Name)
 		if s.isSync2DB && table.IsSync2DB {
 			s.syncDB.Create2DB(bean)
 		}
@@ -196,6 +203,7 @@ func (s *SchemaEngine) RemoveColumn(bean interface{}, cols ...string) error {
 
 	if isNeedRefreshTable {
 		s.ReloadTable(table.Name)
+		redis_pubsub.SharedRdsSubscribMsgInstance().Publish(ChannelSchemaChangedSubscribe, table.Name)
 		if s.isSync2DB && table.IsSync2DB {
 			s.syncDB.Create2DB(bean)
 		}
@@ -242,6 +250,7 @@ func (s *SchemaEngine) AddIndex(bean interface{}, cols ...string) error {
 
 	if isNeedRefreshTable {
 		s.ReloadTable(table.Name)
+		redis_pubsub.SharedRdsSubscribMsgInstance().Publish(ChannelSchemaChangedSubscribe, table.Name)
 		if s.isSync2DB && table.IsSync2DB {
 			s.syncDB.Create2DB(bean)
 		}
@@ -279,6 +288,7 @@ func (s *SchemaEngine) RemoveIndex(bean interface{}, cols ...string) error {
 
 	if isNeedRefreshTable {
 		s.ReloadTable(table.Name)
+		redis_pubsub.SharedRdsSubscribMsgInstance().Publish(ChannelSchemaChangedSubscribe, table.Name)
 		if s.isSync2DB && table.IsSync2DB {
 			s.syncDB.Create2DB(bean)
 		}
@@ -315,6 +325,8 @@ func (s *SchemaEngine) TableDrop(table *Table) error {
 	s.tablesMutex.Lock()
 	delete(s.Tables, table.Name)
 	s.tablesMutex.Unlock()
+
+	redis_pubsub.SharedRdsSubscribMsgInstance().Publish(ChannelSchemaChangedSubscribe, table.Name)
 	//}
 	return err
 }
@@ -338,6 +350,9 @@ func (s *SchemaEngine) ReloadTable(tableName string) (*Table, error) {
 		return nil, err
 	}
 	if !has {
+		s.tablesMutex.Lock()
+		delete(s.Tables, tableName)
+		s.tablesMutex.Unlock()
 		return nil, ERR_UnKnowTable
 	}
 
