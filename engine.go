@@ -301,7 +301,7 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 			//	table.AddIndex(fieldType.Kind(), indexName, col.Name, col.Comment, isUnique, col.Seq)
 			//}
 		} else {
-			e.Printfln("MapTable field:%s, not has tag", typ.Field(i).Name)
+			e.Printfln("MapTable field:%s, has no tag", typ.Field(i).Name)
 		}
 	}
 

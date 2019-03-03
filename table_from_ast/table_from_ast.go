@@ -16,9 +16,9 @@ import (
 https://studygolang.com/articles/6709
 https://github.com/yuroyoro/goast-viewer
 */
-func TableFromAst(fileName string) ([]*redis_orm.Table, error) {
+func TableFromAst(fileName string, fileContent string) ([]*redis_orm.Table, error) {
 	fileSet := token.NewFileSet()
-	astF, err := parser.ParseFile(fileSet, fileName, nil, parser.ParseComments)
+	astF, err := parser.ParseFile(fileSet, fileName, fileContent, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("ParseFile err:%v", err)
 	}

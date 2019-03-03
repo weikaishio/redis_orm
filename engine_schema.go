@@ -38,27 +38,9 @@ func NewSchemaEngine(e *Engine) *SchemaEngine {
 	return schemaEngine
 }
 
-func (s *SchemaEngine) CreateTable(bean interface{}) error {
-	beanValue := reflect.ValueOf(bean)
-	beanIndirectValue := reflect.Indirect(beanValue)
-
-	table, has := s.GetTableByName(s.TableName(beanIndirectValue))
-	if has {
-		s.Printfln("CreateTable GetTableByName(%s),has", s.TableName(beanIndirectValue))
-		return Err_DataHadAvailable
-	}
-
-	table, err := s.mapTable(beanIndirectValue)
-	if err != nil {
-		return err
-	}
-	if table != nil {
-		s.tablesMutex.Lock()
-		s.Tables[table.Name] = table
-		s.tablesMutex.Unlock()
-	}
+func (s *SchemaEngine) CreateTableByTable(table *Table) error {
 	tablesTb := SchemaTablesFromTable(table)
-	err = s.Insert(tablesTb)
+	err := s.Insert(tablesTb)
 	if err != nil {
 		if err != nil {
 			return err
@@ -94,14 +76,36 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 	s.Tables[table.Name] = table
 	s.tablesMutex.Unlock()
 
-	if s.isSync2DB && table.IsSync2DB {
+	return nil
+}
+func (s *SchemaEngine) CreateTable(bean interface{}) error {
+	beanValue := reflect.ValueOf(bean)
+	beanIndirectValue := reflect.Indirect(beanValue)
+
+	table, has := s.GetTableByName(s.TableName(beanIndirectValue))
+	if has {
+		s.Printfln("CreateTable GetTableByName(%s),has", s.TableName(beanIndirectValue))
+		return Err_DataHadAvailable
+	}
+	table, err := s.mapTable(beanIndirectValue)
+	if err != nil {
+		return err
+	}
+	//if table != nil {
+	//	s.tablesMutex.Lock()
+	//	s.Tables[table.Name] = table
+	//	s.tablesMutex.Unlock()
+	//}
+
+	err = s.CreateTable(table)
+	if err == nil && s.isSync2DB && table.IsSync2DB {
 		s.syncDB.Create2DB(bean)
 	}
-	return nil
+	return err
 }
 
 /*
-todo:解释器，需要定义语法~ 头大~ 比如：
+createTable by AST
 ALTER TABLE table_name ADD COLUMN column_name string DEFAULT abc COMMENT 测试列 AFTER updated_at;
 
 ALTER TABLE table_name ADD INDEX index_name uid;
