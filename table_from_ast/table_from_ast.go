@@ -37,7 +37,8 @@ func TableFromAst(fileName string, fileContent string) ([]*redis_orm.Table, erro
 					continue
 				}
 				table := redis_orm.NewEmptyTable()
-				table.Name = spec.Name.Obj.Name
+				table.Name = redis_orm.Camel2Underline(spec.Name.Obj.Name)
+				//table.Version = redis_orm.TableVersionNameUnderline
 
 				for seq, field := range structType.Fields.List {
 					var (

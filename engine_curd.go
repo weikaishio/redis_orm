@@ -17,7 +17,7 @@ func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (b
 		return false, Err_NeedPointer
 	}
 	reflectVal := reflect.Indirect(beanValue)
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return false, ERR_UnKnowTable
 	}
@@ -70,7 +70,7 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 		return false, Err_NeedPointer
 	}
 	reflectVal := reflect.Indirect(beanValue)
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return false, ERR_UnKnowTable
 	}
@@ -146,7 +146,7 @@ func (e *Engine) Count(searchCon *SearchCondition, beanAry interface{}) (int64, 
 			beanValue := reflect.New(sliceElementType.Elem())
 			reflectVal = reflect.Indirect(beanValue)
 			var has bool
-			table, has = e.GetTableByName(e.TableName(reflectVal))
+			table, has = e.GetTableByName(reflectVal.Type().Name())
 			if !has {
 				return 0, ERR_UnKnowTable
 			}
@@ -155,7 +155,7 @@ func (e *Engine) Count(searchCon *SearchCondition, beanAry interface{}) (int64, 
 		beanValue := reflect.New(sliceElementType)
 		reflectVal = reflect.Indirect(beanValue)
 		var has bool
-		table, has = e.GetTableByName(e.TableName(reflectVal))
+		table, has = e.GetTableByName(reflectVal.Type().Name())
 		if !has {
 			return 0, ERR_UnKnowTable
 		}
@@ -185,7 +185,7 @@ func (e *Engine) TableFromBeanAryReflect(beanAry interface{}) (*Table, error) {
 			beanValue := reflect.New(sliceElementType.Elem())
 			reflectVal = reflect.Indirect(beanValue)
 			var has bool
-			table, has = e.GetTableByName(e.TableName(reflectVal))
+			table, has = e.GetTableByName(reflectVal.Type().Name())
 			if !has {
 				return nil, ERR_UnKnowTable
 			}
@@ -194,7 +194,7 @@ func (e *Engine) TableFromBeanAryReflect(beanAry interface{}) (*Table, error) {
 		beanValue := reflect.New(sliceElementType)
 		reflectVal = reflect.Indirect(beanValue)
 		var has bool
-		table, has = e.GetTableByName(e.TableName(reflectVal))
+		table, has = e.GetTableByName(reflectVal.Type().Name())
 		if !has {
 			return nil, ERR_UnKnowTable
 		}
@@ -376,7 +376,7 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 		reflectVal := reflect.Indirect(beanValue)
 		if table == nil {
 			var has bool
-			table, has = e.GetTableByName(e.TableName(reflectVal))
+			table, has = e.GetTableByName(reflectVal.Type().Name())
 			if !has {
 				e.Printfln("GetTable(%v,%v),!has", beanValue, reflectVal)
 				continue
@@ -417,7 +417,7 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 				e.Printfln("HIncrBy(%v,%v) err:%v", table.GetTableKey(), table.GetAutoIncrKey(), err)
 				continue
 			}
-		}else {
+		} else {
 			colValue := reflectVal.FieldByName(table.PrimaryKey)
 			lastId = colValue.Int()
 		}
@@ -475,7 +475,7 @@ func (e *Engine) Insert(bean interface{}) error {
 	}
 	reflectVal := reflect.Indirect(beanValue)
 
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return ERR_UnKnowTable
 	}
@@ -560,7 +560,7 @@ func (e *Engine) GetDefaultValue(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return ERR_UnKnowTable
 	}
@@ -579,7 +579,7 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 	}
 	reflectVal := reflect.Indirect(beanValue)
 
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return 0, ERR_UnKnowTable
 	}
@@ -711,7 +711,7 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	reflectVal := reflect.Indirect(beanValue)
 
 	e.Printfln("incr:%v,%v", beanValue, reflectVal)
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return 0, ERR_UnKnowTable
 	}
@@ -758,7 +758,7 @@ func (e *Engine) Sum(bean interface{}, searchCon *SearchCondition, col string) (
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return 0, ERR_UnKnowTable
 	}
@@ -796,7 +796,7 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return ERR_UnKnowTable
 	}
@@ -885,7 +885,7 @@ func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition)
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return 0, ERR_UnKnowTable
 	}
@@ -926,7 +926,7 @@ func (e *Engine) Delete(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return ERR_UnKnowTable
 	}
@@ -977,7 +977,7 @@ func (e *Engine) Delete(bean interface{}) error {
 func (e *Engine) TableTruncate(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
-	table, has := e.GetTableByName(e.TableName(reflectVal))
+	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return ERR_UnKnowTable
 	}

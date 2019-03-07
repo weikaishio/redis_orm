@@ -108,9 +108,12 @@ func (e *Engine) Printf(format string, a ...interface{}) {
 func (e *Engine) GetTableByName(tableName string) (*Table, bool) {
 	e.tablesMutex.RLock()
 	defer e.tablesMutex.RUnlock()
-	table, has := e.Tables[tableName]
+	table, has := e.Tables[strings.ToLower(tableName)]
 	if !has {
-		e.Printfln("GetTableByName(%s) !has", tableName)
+		table, has = e.Tables[Camel2Underline(tableName)]
+		if !has {
+			e.Printfln("GetTableByName(%s) !has", tableName)
+		}
 	}
 	return table, has
 }

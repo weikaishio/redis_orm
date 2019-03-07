@@ -50,6 +50,10 @@ const (
 	NeedMapTable                  = "schematablestb,schemacolumnstb,schemaindexstb"
 	ChannelSchemaChangedSubscribe = "channel_schema_change"
 )
+//const (
+//	TableVersionNameLower     = 0
+//	TableVersionNameUnderline = 1
+//)
 
 var (
 	ERR_UnKnowField           = errors.New("redis-orm-error:unknown column")

@@ -34,6 +34,7 @@ type SchemaTablesTb struct {
 	IsSync2DB     bool   `redis_orm:"comment '是否同步到数据库'"`
 	Created       string `redis_orm:"comment '创建时间字段'"`
 	Updated       string `redis_orm:"comment '更新时间字段'"`
+	//Version       int32  `redis_orm:"comment '版本'"`
 	CreatedAt     int64  `redis_orm:"created_at comment '创建时间'"`
 	UpdatedAt     int64  `redis_orm:"updated_at comment '修改时间'"`
 }
@@ -48,6 +49,7 @@ func SchemaTablesFromTable(table *Table) *SchemaTablesTb {
 		IsSync2DB:     table.IsSync2DB,
 		Created:       table.Created,
 		Updated:       table.Updated,
+		//Version:       table.Version,
 	}
 }
 
@@ -55,6 +57,7 @@ type Table struct {
 	TableId int64
 	Name    string
 	Comment string
+	//Version int32
 	//Type          reflect.Type
 	ColumnsSeq    []string
 	ColumnsMap    map[string]*Column
@@ -79,6 +82,7 @@ func TableFromSchemaTables(table *SchemaTablesTb) *Table {
 		IndexesMap:    make(map[string]*Index),
 		Created:       table.Created,
 		Updated:       table.Updated,
+		//Version:       table.Version,
 	}
 }
 

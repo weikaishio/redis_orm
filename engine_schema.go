@@ -92,9 +92,9 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	beanIndirectValue := reflect.Indirect(beanValue)
 
-	table, has := s.GetTableByName(s.TableName(beanIndirectValue))
+	table, has := s.GetTableByName(beanIndirectValue.Type().Name())
 	if has {
-		s.Printfln("CreateTable GetTableByName(%s),has", s.TableName(beanIndirectValue))
+		s.Printfln("CreateTable GetTableByName(%s),has", beanIndirectValue.Type().Name())
 		return Err_DataHadAvailable
 	}
 	table, err := s.mapTable(beanIndirectValue)

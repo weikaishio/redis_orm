@@ -542,7 +542,7 @@ func (ixe *IndexEngine) ReBuild(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
 	reflectVal := reflect.Indirect(beanValue)
 
-	table, has := ixe.engine.GetTableByName(ixe.engine.TableName(reflectVal))
+	table, has := ixe.engine.GetTableByName(reflectVal.Type().Name())
 	if !has {
 		return ERR_UnKnowTable
 	}
