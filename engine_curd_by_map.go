@@ -143,6 +143,7 @@ func (e *Engine) InsertByMap(table *Table, columnValMap map[string]string) error
 		if err != nil {
 			return err
 		}
+		columnValMap[table.PrimaryKey]=ToString(lastId)
 	} else {
 		pkFieldValue, ok := columnValMap[table.PrimaryKey]
 		if !ok {

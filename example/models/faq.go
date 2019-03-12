@@ -37,7 +37,7 @@ type FaqTb struct {
 }
 
 type FaqTestTb struct {
-	Fid     int64    `redis_orm:"pk"`
+	Fid     int64  `redis_orm:"pk"`
 	Title   string `redis_orm:"dft 'faqtitle' index comment '标题'" xorm:"default 'faqtitle' VARCHAR(64)"`
 	Content string `redis_orm:"dft 'cnt' comment '内容'" xorm:"default 'cnt' VARCHAR(200)"`
 }

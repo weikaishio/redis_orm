@@ -179,7 +179,11 @@ func Underline2Camel(s string) string{
 				}
 			}
 		} else {
-			res = append(res, s[i]-32)
+			if s[i]>=97&&s[i]<=122 {
+				res = append(res, s[i]-32)
+			}else{
+				res = append(res, s[i])
+			}
 		}
 
 	}
