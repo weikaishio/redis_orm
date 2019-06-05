@@ -208,6 +208,9 @@ func (ixe *IndexEngine) IsExistData(table *Table, beanValue, reflectVal reflect.
 			fieldValue := reflectVal.FieldByName(column)
 			fieldValueAry = append(fieldValueAry, fieldValue)
 		}
+		if !fieldValueAry[0].IsValid() {
+			continue
+		}
 		switch index.Type {
 		case IndexType_IdMember:
 			if !index.IsUnique && index.NameKey != table.GetIndexKey(table.PrimaryKey) {
@@ -376,7 +379,7 @@ func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value
 		return Err_PrimaryKeyNotFound
 	}
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
-	if pkFieldValue.Kind() != reflect.Int64 {
+	if !pkFieldValue.IsValid() || pkFieldValue.Kind() != reflect.Int64 {
 		return Err_PrimaryKeyTypeInvalid
 	}
 	indexsMap := table.IndexesMap
@@ -391,6 +394,9 @@ func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value
 		for _, column := range index.IndexColumn {
 			fieldValue := reflectVal.FieldByName(column)
 			fieldValueAry = append(fieldValueAry, fieldValue)
+		}
+		if !fieldValueAry[0].IsValid() {
+			continue
 		}
 		switch index.Type {
 		case IndexType_IdMember:
@@ -484,7 +490,7 @@ func (ixe *IndexEngine) UpdateByMap(table *Table, pkInt int64, valMap map[string
 		for _, column := range index.IndexColumn {
 			if fieldValue, ok := valMap[column]; ok {
 				fieldValueAry = append(fieldValueAry, fieldValue)
-			}else{
+			} else {
 				return Err_FieldValueInvalid
 			}
 		}
@@ -643,14 +649,14 @@ func (ixe *IndexEngine) ReBuildByTable(table *Table) error {
 		for i := 0; i < len(fields); i += len(table.ColumnsSeq) {
 			valMap := make(map[string]string)
 			var pkInt int64
-			fieldWithPkId:=strings.Split(fields[i],"_")
-			if len(fieldWithPkId)==2 {
+			fieldWithPkId := strings.Split(fields[i], "_")
+			if len(fieldWithPkId) == 2 {
 				SetInt64FromStr(&pkInt, fieldWithPkId[0])
 			}
 			for j, colName := range table.ColumnsSeq {
 				val := valAry[i+j]
 				if val == nil && colName == table.PrimaryKey {
-					ixe.engine.Printfln("table.PrimaryKey:%s val is nil",colName)
+					ixe.engine.Printfln("table.PrimaryKey:%s val is nil", colName)
 					break
 				}
 				if val == nil {

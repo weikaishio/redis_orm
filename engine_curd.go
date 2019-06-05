@@ -30,7 +30,7 @@ func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (b
 		return false, nil
 	}
 	colValue := reflectVal.FieldByName(table.PrimaryKey)
-	if colValue.CanSet() {
+	if colValue.IsValid() && colValue.CanSet() {
 		colValue.SetInt(getId)
 	} else {
 		return false, Err_NeedPointer
@@ -59,8 +59,9 @@ func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (b
 			continue
 		}
 		colValue := reflectVal.FieldByName(table.ColumnsSeq[i])
-
-		SetValue(val, &colValue)
+		if colValue.IsValid() {
+			SetValue(val, &colValue)
+		}
 	}
 	return e.Get(bean)
 }
@@ -76,7 +77,7 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 	}
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
-	if pkFieldValue.Kind() != reflect.Int64 {
+	if !pkFieldValue.IsValid() || pkFieldValue.Kind() != reflect.Int64 {
 		return false, Err_PrimaryKeyTypeInvalid
 	}
 
@@ -124,8 +125,9 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 			continue
 		}
 		colValue := reflectVal.FieldByName(table.ColumnsSeq[i])
-
-		SetValue(val, &colValue)
+		if colValue.IsValid() {
+			SetValue(val, &colValue)
+		}
 	}
 
 	return true, nil
@@ -419,11 +421,16 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 			}
 		} else {
 			colValue := reflectVal.FieldByName(table.PrimaryKey)
-			lastId = colValue.Int()
+			if colValue.IsValid() {
+				lastId = colValue.Int()
+			}
 		}
 		for colName, col := range table.ColumnsMap {
 			fieldName := GetFieldName(lastId, colName)
 			colValue := reflectVal.FieldByName(colName)
+			if !colValue.IsValid() {
+				continue
+			}
 			if col.IsAutoIncrement {
 				valMap[fieldName] = ToString(lastId)
 				if colValue.CanSet() {
@@ -517,7 +524,9 @@ func (e *Engine) Insert(bean interface{}) error {
 		}
 	} else {
 		colValue := reflectVal.FieldByName(table.PrimaryKey)
-		lastId = colValue.Int()
+		if colValue.IsValid() {
+			lastId = colValue.Int()
+		}
 	}
 
 	valMap := make(map[string]interface{})
@@ -525,6 +534,9 @@ func (e *Engine) Insert(bean interface{}) error {
 	for colName, col := range table.ColumnsMap {
 		fieldName := GetFieldName(lastId, colName)
 		colValue := reflectVal.FieldByName(colName)
+		if !colValue.IsValid() {
+			continue
+		}
 		if col.IsAutoIncrement {
 			valMap[fieldName] = ToString(lastId)
 			if colValue.CanSet() {
@@ -567,7 +579,9 @@ func (e *Engine) GetDefaultValue(bean interface{}) error {
 
 	for colName, col := range table.ColumnsMap {
 		colValue := reflectVal.FieldByName(colName)
-		SetDefaultValue(col, &colValue)
+		if colValue.IsValid() {
+			SetDefaultValue(col, &colValue)
+		}
 	}
 	return nil
 }
@@ -683,7 +697,7 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 			SetInt64FromStr(&pkInt, pkIntStr)
 
 			colValue := reflectVal.FieldByName(table.PrimaryKey)
-			if colValue.CanSet() {
+			if colValue.IsValid() && colValue.CanSet() {
 				colValue.SetInt(pkInt)
 			}
 
@@ -721,7 +735,7 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	}
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
-	if pkFieldValue.Kind() != reflect.Int64 {
+	if !pkFieldValue.IsValid() || pkFieldValue.Kind() != reflect.Int64 {
 		return 0, Err_PrimaryKeyTypeInvalid
 	}
 
@@ -746,7 +760,8 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	if err == nil {
 		if e.isSync2DB && table.IsSync2DB {
 			colValue := reflectVal.FieldByName(col)
-			if colValue.CanSet() {
+
+			if colValue.IsValid() && colValue.CanSet() {
 				colValue.SetInt(res)
 			}
 			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{Camel2Underline(col)}, fmt.Sprintf("id=%d", pkInt))
@@ -808,7 +823,7 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 	}
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
-	if pkFieldValue.Kind() != reflect.Int64 {
+	if !pkFieldValue.IsValid() || pkFieldValue.Kind() != reflect.Int64 {
 		return Err_PrimaryKeyTypeInvalid
 	}
 
@@ -932,7 +947,7 @@ func (e *Engine) Delete(bean interface{}) error {
 	}
 
 	pkFieldValue := reflectVal.FieldByName(table.PrimaryKey)
-	if pkFieldValue.Kind() != reflect.Int64 {
+	if !pkFieldValue.IsValid() || pkFieldValue.Kind() != reflect.Int64 {
 		return Err_PrimaryKeyTypeInvalid
 	}
 
