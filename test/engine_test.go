@@ -2,10 +2,11 @@ package test
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/go-redis/redis"
 	"github.com/weikaishio/redis_orm"
 	"github.com/weikaishio/redis_orm/example/models"
-		"testing"
 )
 
 var (
@@ -62,11 +63,11 @@ func TestEngine_Insert(t *testing.T) {
 	//engine.Schema.TableDrop(models.Faq{})
 	//engine.Schema.TableDrop(&models.FaqTestTb{})
 	//engine.Schema.TableTruncate(&models.FaqTestTb{})
-	err := engine.Schema.CreateTable(&models.FaqTestTb{})
-	if err != nil {
-		t.Logf("CreateTable err:%v", err)
-	}
-	err = engine.Insert(&models.FaqTestTb{Fid: 101, Title: "title1", Content: "content"})
+	//err := engine.Schema.CreateTable(&models.FaqTestTb{})
+	//if err != nil {
+	//	t.Logf("CreateTable err:%v", err)
+	//}
+	err := engine.Insert(&models.FaqTestTb{Fid: 101, Title: "title1", Content: "content"})
 	if err != nil {
 		t.Logf("Insert err:%v", err)
 	}
@@ -158,12 +159,17 @@ func TestEngine_Insert(t *testing.T) {
 //}
 
 func TestEngine_Get(t *testing.T) {
-	faq := &models.FaqTestTb{
-		Fid: 101,
-	}
-	has, err := engine.Get(faq)
+	//faq := models.FaqTestTb{
+	//	Fid: 101,
+	//}
+	//has, err := engine.Get(faq)
+	//bys, _ := json.Marshal(faq)
+	//t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
+	var faq *models.FaqTestTb
+	//searchCon:=redis_orm.NewSearchConditionV2(0,redis_orm.ScoreMax,"Fid")
+	err := engine.GetDefaultValue(faq)
 	bys, _ := json.Marshal(faq)
-	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
+	t.Logf("faq:%v,has:%v,err:%v", string(bys), 0, err)
 }
 
 //func TestEngine_GetByCombinedIndex(t *testing.T) {

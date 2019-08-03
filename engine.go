@@ -118,6 +118,9 @@ func (e *Engine) GetTableByName(tableName string) (*Table, bool) {
 	return table, has
 }
 func (e *Engine) GetTableByReflect(beanValue, beanIndirectValue reflect.Value) (*Table, error) {
+	if beanValue.IsNil() {
+		return nil, Err_NilArgument
+	}
 	if beanValue.Kind() != reflect.Ptr {
 		return nil, Err_NeedPointer
 	} else if beanValue.Elem().Kind() == reflect.Ptr {
@@ -179,7 +182,7 @@ func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType 
 			col.IsPrimaryKey = true
 			isIndex = true
 			indexName = col.Name
-			if col.DataType!="int64" {
+			if col.DataType != "int64" {
 				return Err_PrimaryKeyTypeInvalid
 			}
 		} else if keyLower == TagAutoIncrement {

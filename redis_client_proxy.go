@@ -81,12 +81,12 @@ func (c *RedisClientProxy) ZScore(key, member string) *redis.FloatCmd {
 	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
-func (c *RedisClientProxy) ZRangeByScore(key string, opt redis.ZRangeBy) *redis.StringSliceCmd {
+func (c *RedisClientProxy) ZRangeByScore(key string, opt *redis.ZRangeBy) *redis.StringSliceCmd {
 	val := c.redisClient.ZRangeByScore(key, opt)
 	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
-func (c *RedisClientProxy) ZRevRangeByScore(key string, opt redis.ZRangeBy) *redis.StringSliceCmd {
+func (c *RedisClientProxy) ZRevRangeByScore(key string, opt *redis.ZRangeBy) *redis.StringSliceCmd {
 	val := c.redisClient.ZRevRangeByScore(key, opt)
 	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
@@ -104,7 +104,7 @@ func (c *RedisClientProxy) ZRemRangeByScores(key string, min, max string) *redis
 	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
-func (c *RedisClientProxy) ZAdd(key string, members ...redis.Z) *redis.IntCmd {
+func (c *RedisClientProxy) ZAdd(key string, members ...*redis.Z) *redis.IntCmd {
 	if len(members) == 0 {
 		return &redis.IntCmd{}
 	}
@@ -112,7 +112,7 @@ func (c *RedisClientProxy) ZAdd(key string, members ...redis.Z) *redis.IntCmd {
 	c.engine.Printfln("========redis command========\n%v", val.String())
 	return val
 }
-func (c *RedisClientProxy) ZAddNX(key string, members ...redis.Z) *redis.IntCmd {
+func (c *RedisClientProxy) ZAddNX(key string, members ...*redis.Z) *redis.IntCmd {
 	if len(members) == 0 {
 		return &redis.IntCmd{}
 	}

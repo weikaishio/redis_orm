@@ -16,6 +16,9 @@ func (e *Engine) GetByCondition(bean interface{}, searchCon *SearchCondition) (b
 	if beanValue.Kind() != reflect.Ptr {
 		return false, Err_NeedPointer
 	}
+	if beanValue.IsNil() {
+		return false, Err_NilArgument
+	}
 	reflectVal := reflect.Indirect(beanValue)
 	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {
@@ -69,6 +72,9 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 	beanValue := reflect.ValueOf(bean)
 	if beanValue.Kind() != reflect.Ptr {
 		return false, Err_NeedPointer
+	}
+	if beanValue.IsNil() {
+		return false, Err_NilArgument
 	}
 	reflectVal := reflect.Indirect(beanValue)
 	table, has := e.GetTableByName(reflectVal.Type().Name())
@@ -271,7 +277,15 @@ func (e *Engine) Query(offset, limit int64, condition *SearchCondition, table *T
 	return resAry, count, nil
 }
 func (e *Engine) Find(offset, limit int64, searchCon *SearchCondition, beanAry interface{}) (int64, error) {
-	sliceValue := reflect.Indirect(reflect.ValueOf(beanAry))
+	beanAryValue := reflect.ValueOf(beanAry)
+	if beanAryValue.Kind() != reflect.Ptr {
+		return 0, Err_NeedPointer
+	}
+	sliceValue := reflect.Indirect(beanAryValue)
+	if sliceValue.Kind() != reflect.Slice {
+		return 0, Err_NeedPointer
+	}
+
 	sliceElementType := sliceValue.Type().Elem()
 
 	table, err := e.TableFromBeanAryReflect(beanAry)
@@ -372,6 +386,9 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 	var affectBeans []interface{}
 	for _, bean := range beans {
 		beanValue := reflect.ValueOf(bean)
+		if beanValue.IsNil() {
+			return 0, Err_NilArgument
+		}
 		if beanValue.Kind() != reflect.Ptr {
 			return 0, Err_NeedPointer
 		}
@@ -477,6 +494,9 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 //Done:unique index is exist? -> IsExistData
 func (e *Engine) Insert(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return Err_NilArgument
+	}
 	if beanValue.Kind() != reflect.Ptr {
 		return Err_NeedPointer
 	}
@@ -570,6 +590,9 @@ func (e *Engine) Insert(bean interface{}) error {
 
 func (e *Engine) GetDefaultValue(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return Err_NilArgument
+	}
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(reflectVal.Type().Name())
@@ -588,6 +611,9 @@ func (e *Engine) GetDefaultValue(bean interface{}) error {
 
 func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return 0, Err_NilArgument
+	}
 	if beanValue.Kind() != reflect.Ptr {
 		return 0, Err_NeedPointer
 	}
@@ -719,6 +745,9 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 }
 func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return 0, Err_NilArgument
+	}
 	if beanValue.Kind() != reflect.Ptr {
 		return 0, Err_NeedPointer
 	}
@@ -771,6 +800,9 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 }
 func (e *Engine) Sum(bean interface{}, searchCon *SearchCondition, col string) (int64, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return 0, Err_NilArgument
+	}
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(reflectVal.Type().Name())
@@ -809,6 +841,9 @@ func (e *Engine) Sum(bean interface{}, searchCon *SearchCondition, col string) (
 }
 func (e *Engine) Update(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return Err_NilArgument
+	}
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(reflectVal.Type().Name())
@@ -898,6 +933,9 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 }
 func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition) (int, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return 0, Err_NilArgument
+	}
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(reflectVal.Type().Name())
@@ -939,6 +977,9 @@ func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition)
 }
 func (e *Engine) Delete(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return Err_NilArgument
+	}
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(reflectVal.Type().Name())
@@ -991,6 +1032,9 @@ func (e *Engine) Delete(bean interface{}) error {
 //del the hashkey, it will del all elements for this hash
 func (e *Engine) TableTruncate(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.IsNil() {
+		return Err_NilArgument
+	}
 	reflectVal := reflect.Indirect(beanValue)
 	table, has := e.GetTableByName(reflectVal.Type().Name())
 	if !has {

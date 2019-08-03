@@ -50,6 +50,7 @@ const (
 	NeedMapTable                  = "schematablestb,schemacolumnstb,schemaindexstb"
 	ChannelSchemaChangedSubscribe = "channel_schema_change"
 )
+
 //const (
 //	TableVersionNameLower     = 0
 //	TableVersionNameUnderline = 1
@@ -74,4 +75,5 @@ var (
 	Err_NeedPointer                = errors.New("redis-orm-error:needs a pointer to a value")
 	Err_NeedSlice                  = errors.New("redis-orm-error:value needs to be a slice")
 	Err_NotSupportPointer2Pointer  = errors.New("redis-orm-error:pointer to pointer is not supported")
+	Err_NilArgument                = errors.New("redis-orm-error:argument is nil")
 )
