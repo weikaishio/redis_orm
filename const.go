@@ -26,7 +26,7 @@ const (
 	TagDefaultValue = "dft"
 	//是否主键
 	TagPrimaryKey = "pk"
-	//自增~ 暂只支持主键
+	//自增~ 应用于主键
 	TagAutoIncrement = "autoincr"
 	//配置在主键的tag上，配置了该tag才能生效，同步到数据库
 	TagSync2DB = "sync2db"

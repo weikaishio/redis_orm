@@ -186,18 +186,18 @@ func TestEngine_Get(t *testing.T) {
 //	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
 //}
 
-//func TestEngine_Find(t *testing.T) {
-//	//engine.IndexReBuild(models.Faq{})
-//	var faqAry []models.Faq
-//	count, err := engine.Find(0, 30, redis_orm.NewSearchConditionV2(
-//		1,
-//		10,
-//		"Id",
-//	), &faqAry)
-//	bys, _ := json.Marshal(faqAry)
-//	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
-//
-//}
+func TestEngine_Find(t *testing.T) {
+	//engine.IndexReBuild(models.Faq{})
+	var faqAry []models.Faq
+	count, err := engine.Find(0, 30, redis_orm.NewSearchConditionV2(
+		1,
+		10,
+		"Id",
+	), &faqAry)
+	bys, _ := json.Marshal(faqAry)
+	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
+
+}
 
 //func TestEngine_Update(t *testing.T) {
 //	faq := models.Faq{
