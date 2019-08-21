@@ -60,14 +60,14 @@ func TestEngine_Insert(t *testing.T) {
 	//engine.Schema.TableDrop(&redis_orm.SchemaTablesTb{})
 	//engine.Schema.TableDrop(&redis_orm.SchemaColumnsTb{})
 	//engine.Schema.TableDrop(&redis_orm.SchemaIndexsTb{})
-	//engine.Schema.TableDrop(models.Faq{})
+	//engine.Schema.CreateTable(models.FaqTb{})
 	//engine.Schema.TableDrop(&models.FaqTestTb{})
 	//engine.Schema.TableTruncate(&models.FaqTestTb{})
 	//err := engine.Schema.CreateTable(&models.FaqTestTb{})
 	//if err != nil {
 	//	t.Logf("CreateTable err:%v", err)
 	//}
-	err := engine.Insert(&models.FaqTestTb{Fid: 101, Title: "title1", Content: "content"})
+	err := engine.Insert(&models.FaqTb{Type: 101, Title: "title3", Content: "content"})
 	if err != nil {
 		t.Logf("Insert err:%v", err)
 	}
@@ -159,17 +159,16 @@ func TestEngine_Insert(t *testing.T) {
 //}
 
 func TestEngine_Get(t *testing.T) {
-	//faq := models.FaqTestTb{
-	//	Fid: 101,
-	//}
-	//has, err := engine.Get(faq)
-	//bys, _ := json.Marshal(faq)
-	//t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
-	var faq *models.FaqTestTb
-	//searchCon:=redis_orm.NewSearchConditionV2(0,redis_orm.ScoreMax,"Fid")
-	err := engine.GetDefaultValue(faq)
+	faq := &models.FaqTb{}
+
+	searchCon := redis_orm.NewSearchConditionV2(101, 101, "Type")
+	has, err := engine.GetByCondition(faq, searchCon)
 	bys, _ := json.Marshal(faq)
-	t.Logf("faq:%v,has:%v,err:%v", string(bys), 0, err)
+	t.Logf("faq:%v,has:%v,err:%v", string(bys), has, err)
+
+	//err := engine.GetDefaultValue(faq)
+	//bys, _ := json.Marshal(faq)
+	//t.Logf("faq:%v,has:%v,err:%v", string(bys), 0, err)
 }
 
 //func TestEngine_GetByCombinedIndex(t *testing.T) {
@@ -199,14 +198,15 @@ func TestEngine_Get(t *testing.T) {
 //
 //}
 
-//func TestEngine_Update(t *testing.T) {
-//	faq := models.Faq{
-//		Id:    3,
-//		Title: "update1",
-//	}
-//	err := engine.Update(faq, "Title", "asd")
-//	t.Logf("TestEngine_Update err:%v", err)
-//}
+func TestEngine_Update(t *testing.T) {
+	faq := models.FaqTb{
+		Id:   3,
+		Type: 103,
+	}
+	err := engine.Update(&faq, "Type")
+	t.Logf("TestEngine_Update err:%v", err)
+}
+
 //
 //func TestEngine_UpdateMulti(t *testing.T) {
 //	faq := models.Faq{

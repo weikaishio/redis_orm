@@ -386,11 +386,11 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 	var affectBeans []interface{}
 	for _, bean := range beans {
 		beanValue := reflect.ValueOf(bean)
-		if beanValue.IsNil() {
-			return 0, Err_NilArgument
-		}
 		if beanValue.Kind() != reflect.Ptr {
 			return 0, Err_NeedPointer
+		}
+		if beanValue.IsNil() {
+			return 0, Err_NilArgument
 		}
 		reflectVal := reflect.Indirect(beanValue)
 		if table == nil {
@@ -494,11 +494,11 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 //Done:unique index is exist? -> IsExistData
 func (e *Engine) Insert(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
-	if beanValue.IsNil() {
-		return Err_NilArgument
-	}
 	if beanValue.Kind() != reflect.Ptr {
 		return Err_NeedPointer
+	}
+	if beanValue.IsNil() {
+		return Err_NilArgument
 	}
 	reflectVal := reflect.Indirect(beanValue)
 
@@ -590,6 +590,9 @@ func (e *Engine) Insert(bean interface{}) error {
 
 func (e *Engine) GetDefaultValue(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return Err_NeedPointer
+	}
 	if beanValue.IsNil() {
 		return Err_NilArgument
 	}
@@ -611,12 +614,13 @@ func (e *Engine) GetDefaultValue(bean interface{}) error {
 
 func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols ...string) (int, error) {
 	beanValue := reflect.ValueOf(bean)
-	if beanValue.IsNil() {
-		return 0, Err_NilArgument
-	}
 	if beanValue.Kind() != reflect.Ptr {
 		return 0, Err_NeedPointer
 	}
+	if beanValue.IsNil() {
+		return 0, Err_NilArgument
+	}
+
 	reflectVal := reflect.Indirect(beanValue)
 
 	table, has := e.GetTableByName(reflectVal.Type().Name())
@@ -745,11 +749,11 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 }
 func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 	beanValue := reflect.ValueOf(bean)
-	if beanValue.IsNil() {
-		return 0, Err_NilArgument
-	}
 	if beanValue.Kind() != reflect.Ptr {
 		return 0, Err_NeedPointer
+	}
+	if beanValue.IsNil() {
+		return 0, Err_NilArgument
 	}
 	reflectVal := reflect.Indirect(beanValue)
 
@@ -800,6 +804,9 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 }
 func (e *Engine) Sum(bean interface{}, searchCon *SearchCondition, col string) (int64, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return 0, Err_NeedPointer
+	}
 	if beanValue.IsNil() {
 		return 0, Err_NilArgument
 	}
@@ -841,6 +848,9 @@ func (e *Engine) Sum(bean interface{}, searchCon *SearchCondition, col string) (
 }
 func (e *Engine) Update(bean interface{}, cols ...string) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return Err_NeedPointer
+	}
 	if beanValue.IsNil() {
 		return Err_NilArgument
 	}
@@ -933,6 +943,9 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 }
 func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition) (int, error) {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return 0, Err_NeedPointer
+	}
 	if beanValue.IsNil() {
 		return 0, Err_NilArgument
 	}
@@ -977,6 +990,9 @@ func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition)
 }
 func (e *Engine) Delete(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return Err_NeedPointer
+	}
 	if beanValue.IsNil() {
 		return Err_NilArgument
 	}
@@ -1032,6 +1048,9 @@ func (e *Engine) Delete(bean interface{}) error {
 //del the hashkey, it will del all elements for this hash
 func (e *Engine) TableTruncate(bean interface{}) error {
 	beanValue := reflect.ValueOf(bean)
+	if beanValue.Kind() != reflect.Ptr {
+		return Err_NeedPointer
+	}
 	if beanValue.IsNil() {
 		return Err_NilArgument
 	}
