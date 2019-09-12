@@ -27,7 +27,7 @@ func (ixe *IndexEngine) GetId(table *Table, searchCon *SearchCondition) (int64, 
 	}
 	switch index.Type {
 	case IndexType_IdMember:
-		redisZ := &redis.ZRangeBy{
+		redisZ := redis.ZRangeBy{
 			Min:    ToString(searchCon.FieldMinValue),
 			Max:    ToString(searchCon.FieldMaxValue),
 			Offset: 0,
@@ -95,7 +95,7 @@ func (ixe *IndexEngine) Range(table *Table, searchCon *SearchCondition, offset, 
 	}
 	switch index.Type {
 	case IndexType_IdMember:
-		redisZ := &redis.ZRangeBy{
+		redisZ := redis.ZRangeBy{
 			Min:    ToString(searchCon.FieldMinValue),
 			Max:    ToString(searchCon.FieldMaxValue),
 			Offset: offset,
@@ -252,7 +252,7 @@ func (ixe *IndexEngine) IsExistData(table *Table, beanValue, reflectVal reflect.
 					score = score | int64(subScore)
 				}
 			}
-			zRangeBy := &redis.ZRangeBy{
+			zRangeBy := redis.ZRangeBy{
 				Min:    ToString(score),
 				Max:    ToString(score),
 				Offset: 0,
@@ -331,7 +331,7 @@ func (ixe *IndexEngine) IsExistDataByMap(table *Table, valMap map[string]string)
 				SetInt32FromStr(&subScore, fieldValueAry[1])
 				score = score | int64(subScore)
 			}
-			zRangeBy := &redis.ZRangeBy{
+			zRangeBy := redis.ZRangeBy{
 				Min:    ToString(score),
 				Max:    ToString(score),
 				Offset: 0,
@@ -435,7 +435,7 @@ func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value
 					score = score | int64(subScore)
 				}
 			}
-			redisZ := &redis.Z{
+			redisZ := redis.Z{
 				Member: pkFieldValue.Int(),
 				Score:  float64(score), //todo:浮点数有诡异问题
 			}
@@ -457,7 +457,7 @@ func (ixe *IndexEngine) Update(table *Table, beanValue, reflectVal reflect.Value
 					members = append(members, ToString(fieldValue.Interface()))
 				}
 			}
-			redisZ := &redis.Z{
+			redisZ := redis.Z{
 				Member: strings.Join(members, "&"),
 				Score:  float64(pkFieldValue.Int()),
 			}
@@ -508,7 +508,7 @@ func (ixe *IndexEngine) UpdateByMap(table *Table, pkInt int64, valMap map[string
 				SetInt32FromStr(&subScore, fieldValueAry[1])
 				score = score | int64(subScore)
 			}
-			redisZ := &redis.Z{
+			redisZ := redis.Z{
 				Member: pkInt,
 				Score:  float64(score), //todo:浮点数有诡异问题
 			}
@@ -527,7 +527,7 @@ func (ixe *IndexEngine) UpdateByMap(table *Table, pkInt int64, valMap map[string
 			for _, fieldValue := range fieldValueAry {
 				members = append(members, fieldValue)
 			}
-			redisZ := &redis.Z{
+			redisZ := redis.Z{
 				Member: strings.Join(members, "&"),
 				Score:  float64(pkInt),
 			}
