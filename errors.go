@@ -2,6 +2,13 @@ package redis_orm
 
 import "fmt"
 
+type ErrorWithCoder interface {
+	error
+	Code() int
+	Append(format string, a ...interface{}) ErrorWithCoder
+	Equal(err error) bool
+}
+
 type ErrorWithCode struct {
 	msg  string
 	code int
@@ -15,7 +22,7 @@ func (e ErrorWithCode) Code() int {
 	return e.code
 }
 
-func (e ErrorWithCode) Append(format string, a ...interface{}) *ErrorWithCode {
+func (e ErrorWithCode) Append(format string, a ...interface{}) ErrorWithCoder {
 	if len(a) > 0 {
 		return Error(e.Code(), e.msg+" "+fmt.Sprintf(format, a))
 	} else {
@@ -24,7 +31,7 @@ func (e ErrorWithCode) Append(format string, a ...interface{}) *ErrorWithCode {
 }
 
 func (e *ErrorWithCode) Equal(err error) bool {
-	if errWithCode, ok := err.(ErrorWithCode); ok {
+	if errWithCode, ok := err.(ErrorWithCoder); ok {
 		return errWithCode.Code() == e.Code()
 	} else {
 		return false
@@ -34,12 +41,12 @@ func Code(err error) int {
 	if err == nil {
 		return ErrorCode_Success
 	}
-	if errWithCode, ok := err.(ErrorWithCode); ok {
+	if errWithCode, ok := err.(ErrorWithCoder); ok {
 		return errWithCode.Code()
 	}
 	return ErrorCode_Unexpected
 }
-func Error(code int, format string, a ...interface{}) *ErrorWithCode {
+func Error(code int, format string, a ...interface{}) ErrorWithCoder {
 	err := &ErrorWithCode{
 		code: code,
 		msg:  fmt.Sprintf(format, a...),

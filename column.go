@@ -1,5 +1,9 @@
 package redis_orm
 
+import (
+	"strings"
+)
+
 type SchemaColumnsTb struct {
 	Id                int64  `redis_orm:"pk autoincr comment 'ID'"`
 	TableId           int64  `redis_orm:"index comment '表ID'"`
@@ -61,6 +65,16 @@ func ColumnFromSchemaColumns(v *SchemaColumnsTb, schemaTable *SchemaTablesTb) *C
 	}
 	if schemaTable.Updated == v.ColumnName {
 		column.IsUpdated = true
+	}
+	if strings.HasPrefix(v.DataType, TagEnum) {
+		column.EnumOptions = make(map[string]int)
+		enumVal := strings.TrimPrefix(v.DataType, TagEnum)
+		enumVal = strings.TrimPrefix(enumVal, "(")
+		enumVal = strings.TrimSuffix(enumVal, ")")
+		enumAry := strings.Split(enumVal, ",")
+		for index, item := range enumAry {
+			column.EnumOptions[item] = index
+		}
 	}
 	return column
 }

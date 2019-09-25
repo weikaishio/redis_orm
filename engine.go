@@ -213,7 +213,7 @@ func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType 
 			table.IsSync2DB = true
 		} else if keyLower == TagEnum {
 			if len(tags) > j {
-				  enums:=strings.Trim(tags[j+1], "'")
+				enums := strings.Trim(tags[j+1], "'")
 				options := strings.Split(enums, ",")
 				col.EnumOptions = make(map[string]int)
 				for k, v := range options {
@@ -221,8 +221,9 @@ func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType 
 					v = strings.Trim(v, "'")
 					col.EnumOptions[v] = k
 				}
+				col.DataType = fmt.Sprintf("%s(%s)", TagEnum, enums)
 			}
-		}else {
+		} else {
 			//abondon
 		}
 	}
@@ -255,75 +256,11 @@ func (e *Engine) mapTable(v reflect.Value) (*Table, error) {
 			if table.PrimaryKey == "" {
 				return table, Err_PrimaryKeyNotFound
 			}
-			//col = NewEmptyColumn(typ.Field(i).Name)
-			//col.Seq = byte(i)
-			//col.DataType = fieldType.Kind().String()
-			//e.Printfln("col.DataType:%s", col.DataType)
-			//tags := splitTag(rdsTagStr)
-			//var (
-			//	isIndex   bool
-			//	isUnique  bool
-			//	indexName string
-			//)
-			//for j, key := range tags {
-			//	keyLower := strings.ToLower(key)
-			//	if keyLower == TagIndex {
-			//		isIndex = true
-			//		indexName = col.Name
-			//	} else if keyLower == TagUniqueIndex {
-			//		isIndex = true
-			//		indexName = col.Name
-			//		isUnique = true
-			//	} else if keyLower == TagDefaultValue {
-			//		if len(tags) > j {
-			//			col.DefaultValue = strings.Trim(tags[j+1], "'")
-			//		}
-			//	} else if keyLower == TagPrimaryKey {
-			//		col.IsPrimaryKey = true
-			//		isIndex = true
-			//		indexName = col.Name
-			//	} else if keyLower == TagAutoIncrement {
-			//		if table.AutoIncrement != "" {
-			//			return nil, Err_MoreThanOneIncrementColumn
-			//		}
-			//		col.IsAutoIncrement = true
-			//	} else if keyLower == TagComment {
-			//		if len(tags) > j {
-			//			col.Comment = strings.Trim(tags[j+1], "'")
-			//		}
-			//	} else if keyLower == TagCreatedAt {
-			//		col.IsCreated = true
-			//	} else if keyLower == TagUpdatedAt {
-			//		col.IsUpdated = true
-			//	} else if keyLower == TagCombinedindex {
-			//		//Done:combined index
-			//		if fieldType.Kind() != reflect.String && fieldType.Kind() != reflect.Int64 {
-			//			return nil, Err_CombinedIndexTypeError
-			//		}
-			//		if len(tags) > j && tags[j+1] != "" {
-			//			isIndex = true
-			//			indexName = tags[j+1]
-			//			col.IsCombinedIndex = true
-			//		}
-			//		continue
-			//	} else if keyLower == TagSync2DB {
-			//		table.IsSync2DB = true
-			//	} else {
-			//		//abondon
-			//	}
-			//}
-			////col.Type = fieldType
-			//table.AddColumn(col)
-			//if isIndex {
-			//	table.AddIndex(fieldType.Kind(), indexName, col.Name, col.Comment, isUnique, col.Seq)
-			//}
 		} else {
 			e.Printfln("MapTable field:%s, has no tag", typ.Field(i).Name)
 		}
 	}
 
-	//bys, _ := json.Marshal(table)
-	//log.Trace("table:%v", string(bys))
 	return table, nil
 }
 func splitTag(tag string) (tags []string) {

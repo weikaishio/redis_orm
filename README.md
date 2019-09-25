@@ -5,7 +5,7 @@ Object Relational Mapping use redis as a relational database。
 ```text
 项目的快速迭代，不仅需要敏捷的开发，还需具备较高性能的和稳定性，单纯用关系型数据库有瓶颈，然后在关系型数据库基础上加分布式缓存或者进程内缓存有增加了开发和维护成本，
 刚好项目中在用Redis，就考虑基于Redis的Hash和SortedSet两个数据结构来设计类似关系型数据库的ORM。经过多个版本的迭代，现在已经实现了ORM的基本功能，在应用中发现维护和查看数据
-不太方便，又开发了工作台：https://github.com/weikaishio/redis_orm_workbench。
+不太方便，又开发了[工作台](https://github.com/weikaishio/redis_orm_workbench).
 ```
 #### 功能列表
 * 基于对象的增、删、改、查、统计
@@ -16,6 +16,7 @@ Object Relational Mapping use redis as a relational database。
 
 #### 使用说明
 * 模型定义的标签说明
+
 ```go
     TagIdentifier = "redis_orm"
     	//定义是否索引，索引名自动生成 e.g.fmt.Sprintf("%s%s_%s", KeyIndexPrefix, strings.ToLower(table.Name), strings.ToLower(columnName)),
@@ -50,7 +51,8 @@ Object Relational Mapping use redis as a relational database。
 ```
 
 * 模型例子
-```cgo
+
+```go
 type Faq struct {
 	Id         int64  `redis_orm:"pk autoincr sync2db comment 'ID'"` //主键 自增 备注是ID
 	Unique     int64  `redis_orm:"unique comment '唯一'"` //唯一索引
@@ -65,6 +67,7 @@ type Faq struct {
 }
 ```
 * 需要引用的库、初始化方式等
+
 ```go
 import (   
 	"github.com/mkideal/log"
@@ -124,7 +127,7 @@ func main() {
     	
 	//查询指定条件的数据
 	searchCon := NewSearchConditionV2(faq.Unique, faq.Unique, 111)
-	var ary []model.Faq
+	var ary []models.Faq
 	count, err := engine.Find(0, 100, searchCon, &ary)
 	if err != nil {
    		log.Error("Find(%v) err:%v", searchCon, err)
@@ -134,6 +137,7 @@ func main() {
 }
 ```
 * 查看数据 
+
 ```text
 建议使用配套的redis_orm_workbench来管理，可以维护表结构、数据和索引，方便直接在上面新增、修改和删除行数据。
 也可以直接用redis-cli来查看数据，前缀tb:和ix:分别查看表数据和索引。
