@@ -7,6 +7,7 @@ type Faq struct {
 	Title      string `redis_orm:"dft 'faqtitle' index comment '标题'"`
 	Content    string `redis_orm:"dft 'cnt' comment '内容'"`
 	Hearts     int    `redis_orm:"index dft 10 comment '点赞数'"`
+	Category   string `redis_orm:"dft '一类' enum '一类,二类,三类'"`
 	CreatedAt  int64  `redis_orm:"created_at comment '创建时间'"`
 	UpdatedAt  int64  `redis_orm:"updated_at comment '修改时间'"`
 	TypeTitle  string `redis_orm:"combinedindex Type&Title comment '组合索引(类型&标题)'"`

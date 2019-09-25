@@ -1,9 +1,5 @@
 package redis_orm
 
-import (
-	"errors"
-)
-
 //Done: 多个独立的tag辩识和书写更方便些~ 需要加统一前缀，免得跟其他功能定义的tag冲突，然后又太长了，先不改
 const (
 	TagIdentifier = "redis_orm"
@@ -36,6 +32,8 @@ const (
 	TagCreatedAt = "created_at"
 	//是否支持自动写更新时间
 	TagUpdatedAt = "updated_at"
+	//枚举类型
+	TagEnum = "enum"
 
 	//表key前缀+表名
 	KeyTbPrefix = "tb:"
@@ -56,24 +54,48 @@ const (
 //	TableVersionNameUnderline = 1
 //)
 
-var (
-	ERR_UnKnowField           = errors.New("redis-orm-error:unknown column")
-	ERR_UnKnowTable           = errors.New("redis-orm-error:unknown table")
-	ERR_UnKnowError           = errors.New("redis-orm-error:unknown error")
-	ERR_NotSupportIndexField  = errors.New("redis-orm-error:not support this field's index")
-	Err_UnSupportedType       = errors.New("redis-orm-error:unsupported type")
-	Err_UnSupportedTableModel = errors.New("redis-orm-error:unsupported table model")
-	Err_FieldValueInvalid     = errors.New("redis-orm-error:column value invalid")
-	Err_PrimaryKeyNotFound    = errors.New("redis-orm-error:primarykey not found")
-	Err_PrimaryKeyTypeInvalid = errors.New("redis-orm-error:primarykey type invalid")
+const (
+	ErrorCode_Success    = 0
+	ErrorCode_Unexpected = 100
 
-	Err_MoreThanOneIncrementColumn = errors.New("redis-orm-error:more than one increment column")
-	Err_DataNotAvailable           = errors.New("redis-orm-error:data not exist")
-	Err_DataHadAvailable           = errors.New("redis-orm-error:data had exist")
-	Err_CombinedIndexColCountOver  = errors.New("redis-orm-error:combined index not support more than 2 column")
-	Err_CombinedIndexTypeError     = errors.New("redis-orm-error:combined index not support this type of column")
-	Err_NeedPointer                = errors.New("redis-orm-error:needs a pointer to a value")
-	Err_NeedSlice                  = errors.New("redis-orm-error:value needs to be a slice")
-	Err_NotSupportPointer2Pointer  = errors.New("redis-orm-error:pointer to pointer is not supported")
-	Err_NilArgument                = errors.New("redis-orm-error:argument is nil")
+	ErrorCode_UnKnowField = iota
+	ErrorCode_UnKnowTable
+	ErrorCode_UnKnowError
+	ErrorCode_NotSupportIndexField
+	ErrorCode_UnSupportedType
+	ErrorCode_UnSupportedTableModel
+	ErrorCode_FieldValueInvalid
+	ErrorCode_PrimaryKeyNotFound
+	ErrorCode_PrimaryKeyTypeInvalid
+
+	ErrorCode_MoreThanOneIncrementColumn
+	ErrorCode_DataNotAvailable
+	ErrorCode_DataHadAvailable
+	ErrorCode_CombinedIndexColCountOver
+	ErrorCode_CombinedIndexTypeError
+	ErrorCode_NeedPointer
+	ErrorCode_NeedSlice
+	ErrorCode_NotSupportPointer2Pointer
+	ErrorCode_NilArgument
+)
+
+var (
+	ERR_UnKnowField               = Error(ErrorCode_UnKnowField, "redis-orm-error:unknown column")
+	ERR_UnKnowTable               = Error(ErrorCode_UnKnowTable, "redis-orm-error:unknown table")
+	ERR_UnKnowError               = Error(ErrorCode_UnKnowError, "redis-orm-error:unknown error")
+	ERR_NotSupportIndexField      = Error(ErrorCode_NotSupportIndexField, "redis-orm-error:not support this field's index")
+	Err_UnSupportedType           = Error(ErrorCode_UnSupportedType, "redis-orm-error:unsupported type")
+	Err_UnSupportedTableModel     = Error(ErrorCode_UnSupportedTableModel, "redis-orm-error:unsupported table model")
+	Err_FieldValueInvalid         = Error(ErrorCode_FieldValueInvalid, "redis-orm-error:column value invalid")
+	Err_PrimaryKeyNotFound        = Error(ErrorCode_PrimaryKeyNotFound, "redis-orm-error:primarykey not found")
+	Err_PrimaryKeyTypeInvalid     = Error(ErrorCode_PrimaryKeyTypeInvalid, "redis-orm-error:primarykey type invalid")
+	Err_MoreThanOneIncrementColumn    = Error(ErrorCode_MoreThanOneIncrementColumn, "redis-orm-error:more than one increment column")
+	Err_DataNotAvailable          = Error(ErrorCode_DataNotAvailable, "redis-orm-error:data not exist")
+	Err_DataHadAvailable          = Error(ErrorCode_DataHadAvailable, "redis-orm-error:data had exist")
+	Err_CombinedIndexColCountOver = Error(ErrorCode_CombinedIndexColCountOver, "redis-orm-error:combined index not support more than 2 column")
+	Err_CombinedIndexTypeError    = Error(ErrorCode_CombinedIndexTypeError, "redis-orm-error:combined index not support this type of column")
+	Err_NeedPointer               = Error(ErrorCode_NeedPointer, "redis-orm-error:needs a pointer to a value")
+	Err_NeedSlice                 = Error(ErrorCode_NeedSlice, "redis-orm-error:value needs to be a slice")
+	Err_NotSupportPointer2Pointer = Error(ErrorCode_NotSupportPointer2Pointer, "redis-orm-error:pointer to pointer is not supported")
+	Err_NilArgument               = Error(ErrorCode_NilArgument, "redis-orm-error:argument is nil")
 )

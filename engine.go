@@ -211,7 +211,18 @@ func MapTableColumnFromTag(table *Table, seq int, columnName string, columnType 
 			continue
 		} else if keyLower == TagSync2DB {
 			table.IsSync2DB = true
-		} else {
+		} else if keyLower == TagEnum {
+			if len(tags) > j {
+				  enums:=strings.Trim(tags[j+1], "'")
+				options := strings.Split(enums, ",")
+				col.EnumOptions = make(map[string]int)
+				for k, v := range options {
+					v = strings.TrimSpace(v)
+					v = strings.Trim(v, "'")
+					col.EnumOptions[v] = k
+				}
+			}
+		}else {
 			//abondon
 		}
 	}

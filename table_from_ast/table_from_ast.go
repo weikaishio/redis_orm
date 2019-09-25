@@ -69,7 +69,7 @@ func TableFromAst(fileName string, fileContent string) ([]*redis_orm.Table, erro
 							}
 						}
 						//Done:field.Type -> reflect.Kind
-						fmt.Printf("field.Type:%T,%s\n", field.Type, redis_orm.ToString(field.Type))
+						//fmt.Printf("field.Type:%T,%s\n", field.Type, redis_orm.ToString(field.Type))
 						fieldTypeStr := redis_orm.ToString(field.Type)
 						var identObj ast.Ident
 						err = json.Unmarshal([]byte(fieldTypeStr), &identObj)

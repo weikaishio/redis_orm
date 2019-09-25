@@ -69,7 +69,8 @@ func TestEngine_Insert(t *testing.T) {
 	//}
 	err := engine.Insert(&models.FaqTb{Type: 101, Title: "title3", Content: "content"})
 	if err != nil {
-		t.Logf("Insert err:%v", err)
+		errWithCode:=err.(*redis_orm.ErrorWithCode)
+		t.Logf("Insert err:%v,%v", errWithCode.Code(),errWithCode.Error())
 	}
 	//t.Logf("tables:%v", engine.Tables)
 	//engine.TableTruncate(&models.FaqTb{})
@@ -193,6 +194,10 @@ func TestEngine_Find(t *testing.T) {
 		10,
 		"Id",
 	), &faqAry)
+	table := engine.Tables["faq"]
+	if table != nil {
+		t.Logf("table:%v", table.ColumnsMap)
+	}
 	bys, _ := json.Marshal(faqAry)
 	t.Logf("faqAry:%v,count:%v,err:%v", string(bys), count, err)
 
