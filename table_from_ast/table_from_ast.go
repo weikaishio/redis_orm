@@ -1,14 +1,13 @@
 package table_from_ast
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"reflect"
-	"strings"
 
-	"encoding/json"
 	"github.com/weikaishio/redis_orm"
 )
 
@@ -62,12 +61,13 @@ func TableFromAst(fileName string, fileContent string) ([]*redis_orm.Table, erro
 							tag = tag[:len(tag)-1]
 						}
 						rdsTagStr := reflect.StructTag(tag).Get(redis_orm.TagIdentifier)
-						if len(rdsTagStr) > 0 {
-							tmpStrs := strings.SplitN(rdsTagStr, ",", 2)
-							if len(tmpStrs) > 0 {
-								rdsTagStr = tmpStrs[0]
-							}
-						}
+						//todo:why do it?
+						//if len(rdsTagStr) > 0 {
+						//	tmpStrs := strings.SplitN(rdsTagStr, ",", 2)
+						//	if len(tmpStrs) > 0 {
+						//		rdsTagStr = tmpStrs[0]
+						//	}
+						//}
 						//Done:field.Type -> reflect.Kind
 						//fmt.Printf("field.Type:%T,%s\n", field.Type, redis_orm.ToString(field.Type))
 						fieldTypeStr := redis_orm.ToString(field.Type)

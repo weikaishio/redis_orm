@@ -106,7 +106,7 @@ func (e *Engine) Get(bean interface{}) (bool, error) {
 		return false, err
 	}
 	if !has {
-		return false, Err_DataNotAvailable
+		return false, nil
 	}
 
 	fields := make([]string, 0)
@@ -462,6 +462,12 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 					colValue.SetInt(createdAt)
 				}
 			} else {
+				if col.EnumOptions != nil {
+					_, has := col.EnumOptions[ToString(colValue.Interface())]
+					if !has {
+						continue
+					}
+				}
 				SetDefaultValue(col, &colValue)
 				valMap[fieldName] = ToString(colValue.Interface())
 			}
@@ -571,6 +577,12 @@ func (e *Engine) Insert(bean interface{}) error {
 				colValue.SetInt(createdAt)
 			}
 		} else {
+			if col.EnumOptions != nil {
+				_, has := col.EnumOptions[ToString(colValue.Interface())]
+				if !has {
+					return Err_FieldValueInvalidForEnum.Append(col.Name)
+				}
+			}
 			SetDefaultValue(col, &colValue)
 			valMap[fieldName] = ToString(colValue.Interface())
 		}
@@ -917,6 +929,12 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 
 		colValue := reflectVal.FieldByName(colUpdate)
 		if colValue.IsValid() {
+			if col.EnumOptions != nil {
+				_, has := col.EnumOptions[ToString(colValue.Interface())]
+				if !has {
+					continue
+				}
+			}
 			valMap[fieldName] = ToString(colValue.Interface())
 		} else {
 			valMap[fieldName] = col.DefaultValue

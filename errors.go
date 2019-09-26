@@ -39,12 +39,12 @@ func (e *ErrorWithCode) Equal(err error) bool {
 }
 func Code(err error) int {
 	if err == nil {
-		return ErrorCode_Success
+		return ErrorCodeSuccess
 	}
 	if errWithCode, ok := err.(ErrorWithCoder); ok {
 		return errWithCode.Code()
 	}
-	return ErrorCode_Unexpected
+	return ErrorCodeUnexpected
 }
 func Error(code int, format string, a ...interface{}) ErrorWithCoder {
 	err := &ErrorWithCode{

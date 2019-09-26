@@ -26,10 +26,10 @@ func init() {
 
 	engine = redis_orm.NewEngine(redisClient)
 	engine.IsShowLog(true)
-	//_, err := engine.Schema.ReloadTables()
-	//if err != nil {
-	//	engine.Printfln("ReloadTables err:%v", err)
-	//}
+	_, err := engine.Schema.ReloadTables()
+	if err != nil {
+		engine.Printfln("ReloadTables err:%v", err)
+	}
 }
 
 func TestEngine_GetDefaultValue(t *testing.T) {
@@ -50,10 +50,10 @@ func TestEngine_Insert(t *testing.T) {
 	//if err != nil {
 	//	t.Logf("CreateTable err:%v", err)
 	//}
-	err := engine.Insert(&models.FaqTb{Type: 101, Title: "title3", Content: "content"})
+	err := engine.Insert(&models.Faq{Unique: 2, Type: 102, Category: "一类", Title: "title2", Content: "content"})
 	if err != nil {
-		errWithCode:=err.(redis_orm.ErrorWithCoder)
-		t.Logf("Insert err:%v,%v", errWithCode.Code(),errWithCode.Error())
+		errWithCode := err.(redis_orm.ErrorWithCoder)
+		t.Logf("Insert err:%v,%v", errWithCode.Code(), errWithCode.Error())
 	}
 	//t.Logf("tables:%v", engine.Tables)
 	//engine.TableTruncate(&models.FaqTb{})
@@ -182,7 +182,6 @@ func TestEngine_Update(t *testing.T) {
 	t.Logf("TestEngine_Update err:%v", err)
 }
 
-
 func TestEngine_UpdateMulti(t *testing.T) {
 	faq := models.Faq{
 		Title: "test51",
@@ -205,7 +204,6 @@ func TestEngine_Delete(t *testing.T) {
 	err := engine.Delete(faq)
 	t.Logf("Delete faq:%v, err:%v", faq, err)
 }
-
 
 func TestEngine_TableDrop(t *testing.T) {
 	faq := &models.Faq{}
