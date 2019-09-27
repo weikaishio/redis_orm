@@ -103,9 +103,11 @@ func (s *SchemaEngine) CreateTable(bean interface{}) error {
 	}
 
 	err = s.CreateTableByTable(table)
-	if err == nil && s.isSync2DB && table.IsSync2DB {
+	if err == nil {
 		redis_pubsub.SharedRdsSubscribMsgInstance().Publish(ChannelSchemaChangedSubscribe, table.Name)
-		s.syncDB.Create2DB(bean)
+		if s.isSync2DB && table.IsSync2DB {
+			s.syncDB.Create2DB(bean)
+		}
 	}
 	return err
 }

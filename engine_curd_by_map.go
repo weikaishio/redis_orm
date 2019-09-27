@@ -80,6 +80,12 @@ func (e *Engine) UpdateByMap(table *Table, columnValMap map[string]string) error
 		}
 
 		if val, ok := columnValMap[colUpdate]; ok {
+			if col.EnumOptions != nil {
+				_, has := col.EnumOptions[val]
+				if !has {
+					continue
+				}
+			}
 			valMap[fieldName] = val
 		} else {
 			valMap[fieldName] = col.DefaultValue
@@ -171,6 +177,12 @@ func (e *Engine) InsertByMap(table *Table, columnValMap map[string]string) error
 			//	colValue.SetInt(createdAt)
 			//}
 		} else {
+			if col.EnumOptions != nil {
+				_, has := col.EnumOptions[colValue]
+				if !has {
+					return Err_FieldValueInvalidForEnum.Append(col.Name)
+				}
+			}
 			//SetDefaultValue(col, &colValue)
 			valMap[fieldName] = colValue
 		}
