@@ -7,6 +7,7 @@ Object Relational Mapping use redis as a relational database。
 刚好项目中在用Redis，就考虑基于Redis的Hash和SortedSet两个数据结构来设计类似关系型数据库的ORM。经过多个版本的迭代，现在已经实现了ORM的基本功能，在应用中发现维护和查看数据
 不太方便，又开发了[工作台](https://github.com/weikaishio/redis_orm_workbench).
 ```
+![工作台](https://github.com/weikaishio/redis_orm/blob/master/example/1569984252466.gif?raw=true)
 #### 功能列表
 * 基于对象的增、删、改、查、统计
 * 基于Map的增、删、改、查、统计(方便用在redis_orm_workbench)
