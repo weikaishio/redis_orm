@@ -14,7 +14,10 @@ func (e *Engine) DeleteByPK(table *Table, pkInt int64) error {
 
 	_, err := e.redisClient.HDel(table.GetTableKey(), fields...).Result()
 	if err == nil {
-		e.Index.Delete(table, pkInt)
+		err = e.Index.Delete(table, pkInt)
+		if err != nil {
+			e.Printfln("DeleteByPK Index.Delete(%s,%d) err:%v", table.Name, pkInt, err)
+		}
 		//todo:support syncDB.Add, need general SQL
 		//if e.isSync2DB && table.IsSync2DB {
 		//	e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, nil, fmt.Sprintf("id=%d", pkInt))
@@ -25,7 +28,7 @@ func (e *Engine) DeleteByPK(table *Table, pkInt int64) error {
 
 func (e *Engine) UpdateByMap(table *Table, columnValMap map[string]string) error {
 	var cols []string
-	for col, _ := range columnValMap {
+	for col := range columnValMap {
 		_, isExist := table.ColumnsMap[col]
 		if isExist {
 			cols = append(cols, col)
@@ -41,7 +44,7 @@ func (e *Engine) UpdateByMap(table *Table, columnValMap map[string]string) error
 		return Err_PrimaryKeyNotFound
 	}
 	var pkInt int64
-	SetInt64FromStr(&pkInt, pkFieldValue)
+	err := SetInt64FromStr(&pkInt, pkFieldValue)
 	if pkInt <= 0 {
 		return Err_PrimaryKeyTypeInvalid
 	}
@@ -114,7 +117,7 @@ func (e *Engine) UpdateByMap(table *Table, columnValMap map[string]string) error
 
 func (e *Engine) InsertByMap(table *Table, columnValMap map[string]string) error {
 	var cols []string
-	for col, _ := range columnValMap {
+	for col := range columnValMap {
 		_, isExist := table.ColumnsMap[col]
 		if isExist {
 			cols = append(cols, col)
@@ -149,13 +152,13 @@ func (e *Engine) InsertByMap(table *Table, columnValMap map[string]string) error
 		if err != nil {
 			return err
 		}
-		columnValMap[table.PrimaryKey]=ToString(lastId)
+		columnValMap[table.PrimaryKey] = ToString(lastId)
 	} else {
 		pkFieldValue, ok := columnValMap[table.PrimaryKey]
 		if !ok {
 			return Err_PrimaryKeyNotFound
 		}
-		SetInt64FromStr(&lastId, pkFieldValue)
+		_ = SetInt64FromStr(&lastId, pkFieldValue)
 	}
 
 	valMap := make(map[string]interface{})

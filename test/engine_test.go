@@ -97,7 +97,7 @@ func TestEngine_Insert(t *testing.T) {
 }
 
 func TestEngine_Incr(t *testing.T) {
-	faq := models.Faq{
+	faq := &models.Faq{
 		Id: 2,
 	}
 	engine.Schema.CreateTable(faq)

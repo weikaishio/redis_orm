@@ -39,8 +39,8 @@ func (ixe *IndexEngine) GetId(table *Table, searchCon *SearchCondition) (int64, 
 				return 0, nil
 			}
 			var id int64
-			SetInt64FromStr(&id, res[0])
-			return id, nil
+			err = SetInt64FromStr(&id, res[0])
+			return id, err
 		} else {
 			ixe.engine.Printfln("GetId ZRangeWithScores(%s,%v,%v) err:%v", index.NameKey, searchCon.FieldMinValue, searchCon.FieldMaxValue, err)
 			return 0, err
@@ -613,7 +613,10 @@ func (ixe *IndexEngine) ReBuild(bean interface{}) error {
 }
 
 func (ixe *IndexEngine) ReBuildByTable(table *Table) error {
-	ixe.Drop(table, table.PrimaryKey)
+	err := ixe.Drop(table, table.PrimaryKey)
+	if err != nil {
+		ixe.engine.Printfln("ReBuildByTable ixe.Drop(%s, table.PrimaryKey) err:%v", table.Name, err)
+	}
 
 	var offset int64 = 0
 	var limit int64 = 100
@@ -651,7 +654,10 @@ func (ixe *IndexEngine) ReBuildByTable(table *Table) error {
 			var pkInt int64
 			fieldWithPkId := strings.Split(fields[i], "_")
 			if len(fieldWithPkId) == 2 {
-				SetInt64FromStr(&pkInt, fieldWithPkId[0])
+				err = SetInt64FromStr(&pkInt, fieldWithPkId[0])
+				if err != nil {
+					return err
+				}
 			}
 			for j, colName := range table.ColumnsSeq {
 				val := valAry[i+j]

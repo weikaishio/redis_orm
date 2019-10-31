@@ -57,7 +57,7 @@ type Engine struct {
 	wait      *sync.WaitGroup
 }
 
-func NewEngine(redisCli *redis.Client) *Engine {
+func NewEngine(redisCli redis.Cmdable) *Engine {
 	redisCliProxy := NewRedisCliProxy(redisCli)
 	engine := &Engine{
 		redisClient: redisCliProxy,
@@ -75,7 +75,10 @@ func NewEngine(redisCli *redis.Client) *Engine {
 	schema := NewSchemaEngine(engine)
 	engine.Schema = schema
 
-	engine.Schema.ReloadTables()
+	_, err := engine.Schema.ReloadTables()
+	if err != nil {
+		engine.Printfln("ReloadTables err:%v", err)
+	}
 	return engine
 }
 func (e *Engine) SetSync2DB(mysqlOrm *xorm.Engine, lazyTimeSecond int) {
@@ -294,20 +297,26 @@ func SetDefaultValue(col *Column, value *reflect.Value) {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if value.Int() == 0 {
 			var valInt int64
-			SetInt64FromStr(&valInt, col.DefaultValue)
-			value.SetInt(valInt)
+			err := SetInt64FromStr(&valInt, col.DefaultValue)
+			if err == nil {
+				value.SetInt(valInt)
+			}
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		if value.Uint() == 0 {
 			var valInt uint64
-			SetUint64FromStr(&valInt, col.DefaultValue)
-			value.SetUint(valInt)
+			err := SetUint64FromStr(&valInt, col.DefaultValue)
+			if err == nil {
+				value.SetUint(valInt)
+			}
 		}
 	case reflect.Float32, reflect.Float64:
 		if value.Float() == 0 {
 			var valInt float64
-			SetFloat64FromStr(&valInt, col.DefaultValue)
-			value.SetFloat(valInt)
+			err := SetFloat64FromStr(&valInt, col.DefaultValue)
+			if err == nil {
+				value.SetFloat(valInt)
+			}
 		}
 	case reflect.String:
 		if ToString(value.Interface()) == "" {
@@ -329,16 +338,22 @@ func SetValue(val interface{}, value *reflect.Value) {
 	switch value.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		var valInt int64
-		SetInt64FromStr(&valInt, ToString(val))
-		value.SetInt(valInt)
+		err := SetInt64FromStr(&valInt, ToString(val))
+		if err == nil {
+			value.SetInt(valInt)
+		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		var valInt uint64
-		SetUint64FromStr(&valInt, ToString(val))
-		value.SetUint(valInt)
+		err := SetUint64FromStr(&valInt, ToString(val))
+		if err == nil {
+			value.SetUint(valInt)
+		}
 	case reflect.Float32, reflect.Float64:
 		var valInt float64
-		SetFloat64FromStr(&valInt, ToString(val))
-		value.SetFloat(valInt)
+		err := SetFloat64FromStr(&valInt, ToString(val))
+		if err == nil {
+			value.SetFloat(valInt)
+		}
 	case reflect.String:
 		value.SetString(ToString(val))
 	case reflect.Map:
@@ -347,8 +362,10 @@ func SetValue(val interface{}, value *reflect.Value) {
 		//value.Set(reflect.MapOf())
 	case reflect.Bool:
 		var valBool bool
-		SetBoolFromStr(&valBool, ToString(val))
-		value.SetBool(valBool)
+		err := SetBoolFromStr(&valBool, ToString(val))
+		if err == nil {
+			value.SetBool(valBool)
+		}
 	default:
 		value.Set(reflect.ValueOf(val))
 	}

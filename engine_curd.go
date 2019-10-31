@@ -485,7 +485,10 @@ func (e *Engine) InsertMulti(beans ...interface{}) (int, error) {
 		for _, bean := range affectBeans {
 			beanValue := reflect.ValueOf(bean)
 			if e.isSync2DB && table.IsSync2DB {
-				e.syncDB.Add(bean, db_lazy.LazyOperateType_Insert, nil, "")
+				err = e.syncDB.Add(bean, db_lazy.LazyOperateType_Insert, nil, "")
+				if err != nil {
+					e.Printfln("InsertMulti syncDB.Add(%v) err:%v", bean, err)
+				}
 			}
 			reflectVal := reflect.Indirect(beanValue)
 			err = e.Index.Update(table, beanValue, reflectVal)
@@ -594,7 +597,10 @@ func (e *Engine) Insert(bean interface{}) error {
 			e.Printfln("Insert Update(%s,%v) err:%v", table.Name, bean, err)
 		}
 		if e.isSync2DB && table.IsSync2DB {
-			e.syncDB.Add(bean, db_lazy.LazyOperateType_Insert, nil, "")
+			err = e.syncDB.Add(bean, db_lazy.LazyOperateType_Insert, nil, "")
+			if err != nil {
+				e.Printfln("Insert syncDB.Add(%v) err:%v", bean, err)
+			}
 		}
 	}
 	return err
@@ -693,8 +699,8 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 		}
 		if pkOldId > 0 {
 			var pkInt int64
-			SetInt64FromStr(&pkInt, idAry[0])
-			if pkInt != pkOldId {
+			err = SetInt64FromStr(&pkInt, idAry[0])
+			if err != nil || pkInt != pkOldId {
 				return 0, Err_DataHadAvailable
 			}
 		}
@@ -736,8 +742,10 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 	if err == nil {
 		for _, pkIntStr := range idAry {
 			var pkInt int64
-			SetInt64FromStr(&pkInt, pkIntStr)
-
+			err = SetInt64FromStr(&pkInt, pkIntStr)
+			if err != nil {
+				continue
+			}
 			colValue := reflectVal.FieldByName(table.PrimaryKey)
 			if colValue.IsValid() && colValue.CanSet() {
 				colValue.SetInt(pkInt)
@@ -752,7 +760,10 @@ func (e *Engine) UpdateMulti(bean interface{}, searchCon *SearchCondition, cols 
 				for _, col := range cols {
 					colsDb = append(colsDb, Camel2Underline(col))
 				}
-				e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, colsDb, fmt.Sprintf("id=%d", pkInt))
+				err = e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, colsDb, fmt.Sprintf("id=%d", pkInt))
+				if err != nil {
+					e.Printfln("UpdateMulti syncDB.Add(%v) err:%v", bean, err)
+				}
 			}
 		}
 	}
@@ -809,7 +820,10 @@ func (e *Engine) Incr(bean interface{}, col string, val int64) (int64, error) {
 			if colValue.IsValid() && colValue.CanSet() {
 				colValue.SetInt(res)
 			}
-			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{Camel2Underline(col)}, fmt.Sprintf("id=%d", pkInt))
+			err = e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, []string{Camel2Underline(col)}, fmt.Sprintf("id=%d", pkInt))
+			if err != nil {
+				e.Printfln("Incr syncDB.Add(%v) err:%v", bean, err)
+			}
 		}
 	}
 	return res, err
@@ -853,8 +867,10 @@ func (e *Engine) Sum(bean interface{}, searchCon *SearchCondition, col string) (
 	var res int64
 	for _, val := range valAry {
 		var valInt int64
-		SetInt64FromStr(&valInt, ToString(val))
-		res += valInt
+		err = SetInt64FromStr(&valInt, ToString(val))
+		if err == nil {
+			res += valInt
+		}
 	}
 	return res, nil
 }
@@ -954,7 +970,10 @@ func (e *Engine) Update(bean interface{}, cols ...string) error {
 			for _, col := range cols {
 				colsDb = append(colsDb, Camel2Underline(col))
 			}
-			e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, colsDb, fmt.Sprintf("id=%d", pkOldId))
+			err = e.syncDB.Add(bean, db_lazy.LazyOperateType_Update, colsDb, fmt.Sprintf("id=%d", pkOldId))
+			if err != nil {
+				e.Printfln("Update syncDB.Add(%v) err:%v", bean, err)
+			}
 		}
 	}
 	return err
@@ -986,7 +1005,10 @@ func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition)
 
 	for _, idStr := range idAry {
 		var pkInt int64
-		SetInt64FromStr(&pkInt, idStr)
+		err = SetInt64FromStr(&pkInt, idStr)
+		if err != nil {
+			continue
+		}
 		for _, colName := range table.ColumnsSeq {
 			fieldName := GetFieldName(pkInt, colName)
 			fields = append(fields, fieldName)
@@ -997,10 +1019,19 @@ func (e *Engine) DeleteByCondition(bean interface{}, searchCon *SearchCondition)
 	if err == nil {
 		for _, idStr := range idAry {
 			var pkInt int64
-			SetInt64FromStr(&pkInt, idStr)
-			e.Index.Delete(table, pkInt)
+			err = SetInt64FromStr(&pkInt, idStr)
+			if err != nil {
+				continue
+			}
+			err = e.Index.Delete(table, pkInt)
+			if err != nil {
+				e.Printfln("DeleteByCondition Index.Delete(%s,%d) err:%v", table.Name, pkInt, err)
+			}
 			if e.isSync2DB && table.IsSync2DB {
-				e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, nil, fmt.Sprintf("id=%d", pkInt))
+				err = e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, nil, fmt.Sprintf("id=%d", pkInt))
+				if err != nil {
+					e.Printfln("DeleteByCondition syncDB.Add(%v) err:%v", bean, err)
+				}
 			}
 		}
 	}
@@ -1055,9 +1086,15 @@ func (e *Engine) Delete(bean interface{}) error {
 
 	_, err = e.redisClient.HDel(table.GetTableKey(), fields...).Result()
 	if err == nil {
-		e.Index.Delete(table, pkInt)
+		err = e.Index.Delete(table, pkInt)
+		if err != nil {
+			e.Printfln("Delete Index.Delete(%s,%d) err:%v", table.Name, pkInt, err)
+		}
 		if e.isSync2DB && table.IsSync2DB {
-			e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, nil, fmt.Sprintf("id=%d", pkInt))
+			err = e.syncDB.Add(bean, db_lazy.LazyOperateType_Delete, nil, fmt.Sprintf("id=%d", pkInt))
+			if err != nil {
+				e.Printfln("Delete syncDB.Add(%v) err:%v", bean, err)
+			}
 		}
 	}
 	return nil

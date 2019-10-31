@@ -6,10 +6,10 @@ import (
 
 type RedisClientProxy struct {
 	engine      *Engine
-	redisClient *redis.Client
+	redisClient redis.Cmdable
 }
 
-func NewRedisCliProxy(redisCli *redis.Client) *RedisClientProxy {
+func NewRedisCliProxy(redisCli redis.Cmdable) *RedisClientProxy {
 	return &RedisClientProxy{
 		redisClient: redisCli,
 	}
